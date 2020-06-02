@@ -6,19 +6,7 @@ Which starting three should I be happy with?
 
 import argparse
 
-from random import randint
-
-
-class Die(object):
-    """
-    This might be overkill.
-    """
-    def __init__(self):
-        self.value = None
-        self.roll()
-
-    def roll(self):
-        self.value = randint(1, 6)
+from cantstop.all_the_things import Die
 
 
 def roll(iterations):
@@ -103,8 +91,7 @@ if __name__ == "__main__":
     main()
 
 '''
-The odds of hitting seven is, as expected, the greatest odds.  What is surprising is this does not
-fit a normal distribution.
+The odds of hitting seven is, as expected, the greatest odds.
  2: 98
  3: 215
  4: 316
