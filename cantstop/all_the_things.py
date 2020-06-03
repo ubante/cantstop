@@ -14,6 +14,7 @@ stop and make their progress permanent.
 """
 
 from collections import defaultdict
+from pprint import PrettyPrinter
 from random import randint, shuffle
 
 
@@ -123,21 +124,32 @@ class Game(object):
 
                     state = State(roll_choices, self.board.get_status(), self.round_ctr)
                     choice = p.choose_columns(state)
+
+                    # Right now, the bots don't know how to choose.  So skip them.
+                    if not choice:
+                        print("Skipping turn of {}".format(p.name))
+                        is_busted = True
+                        self.board.bust_player(p)
+                        continue
+
                     self.board.register_roll_choice(p, choice)
 
                     # Do I need to send the state for this?
                     state = State(roll_choices, self.board.get_status(), self.round_ctr)
-                    choice = p.stop_or_play(state)
+                    choice = p.stop_or_continue(state)
                     if choice == 1:
                         do_play = False
+                        self.board.register_stop_choice(p)
 
 
 class Board(object):
     def __init__(self):
         self.players = []
-        self.columns = {}  # Tempted to make a column() class to replace this dict of dicts.
+        # Tempted to make a column() class to replace this dict of dicts of lists.
+        self.columns = {}
         self.player_positions = {}
         self.temporary_progress = {}
+        self.free_markers = 3
         self.initialize()
 
     def initialize(self):
@@ -145,7 +157,7 @@ class Board(object):
             num_positions = column*2-1
             self.columns[column] = {"intervals": num_positions}
 
-            # Each column has a list of positions.  The outer columns
+            # Each column has a list ofst positions.  The outer columns
             # have less positions.  Each position has a list players at
             # that position.
             for position in range(0, column*2-1+1):
@@ -153,6 +165,7 @@ class Board(object):
 
     def reset_progress(self):
         self.temporary_progress = {}
+        self.free_markers = 3
 
     def add_player(self, p):
         self.players.append(p)
@@ -199,8 +212,21 @@ class Board(object):
             print()
         print()
 
+    def bust_player(self, player):
+        self.reset_progress()
+
     def register_roll_choice(self, player, choice):
-        pass
+        print("Player chose: {}".format(choice))
+        # PrettyPrinter().pprint(self.columns)
+        for column in choice:
+            if choice in self.temporary_progress:
+                # We can assume that if a column is temporarily maxed,
+                # then the player would not have had a chance to choose
+                # it so no need to check for maxed out state here.
+                self.temporary_progress[column] += 1
+            else:
+                self.free_markers -= 1
+                self.temporary_progress[column] = 1
 
     def register_stop_choice(self, player):
         # Commit the temporary progress.
@@ -233,7 +259,7 @@ class State(object):
                 print("{:>5}".format(self.board_status[name][column - 2]), end="")
             print()
 
-        print("Turn #{}: your choices are:".format(self.turn))
+        print("Turn #{}, your choices are:".format(self.turn))
         for ctr, choice in enumerate(self.choices, start=1):
             print("{}: {}".format(ctr, choice))
 
@@ -248,7 +274,7 @@ class Player(object):
     def choose_columns(self, state):
         print("Default player, {}, is passing on choosing columns.".format(self.name))
 
-    def stop_or_play(self, state):
+    def stop_or_continue(self, state):
         """
         1 = Stop
         2 = Play
@@ -259,19 +285,51 @@ class Player(object):
         return 1
 
     def bust_out(self):
-        pass
+        print("Player {} has busted out.".format(self.name))
 
 
 class HumanPlayer(Player):
     def choose_columns(self, state):
         state.display()
-        user_input = input("Enter: ")
-        return user_input
 
-    def stop_or_play(self, state):
-        print("1: Stop\n2: Play")
+        while True:
+            try:
+                user_input = int(input("Enter: "))
+            except ValueError:
+                print("Try again.")
+                continue
+
+            if user_input not in range(1, len(state.choices)+1):
+                print("Try again.")
+                continue
+
+            break
+
+        return state.choices[user_input-1]
+        # return user_input
+
+    def stop_or_continue(self, state):
+        print("1: Stop\n2: Continue")
         user_input = input("Enter: ")
         return int(user_input)
+
+    @staticmethod
+    def enter(max_value):
+        user_input = None
+        while True:
+            try:
+                user_input = int(input("Enter: "))
+            except ValueError:
+                print("Try again.")
+                continue
+
+            if user_input not in range(1, max_value):
+                print("Try again.")
+                continue
+
+            break
+
+        return user_input
 
 
 class TripleValueOdds(object):
