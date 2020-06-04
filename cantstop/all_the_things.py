@@ -14,7 +14,6 @@ stop and make their progress permanent.
 """
 
 from collections import defaultdict
-from pprint import PrettyPrinter
 from random import randint, shuffle
 
 
@@ -49,21 +48,37 @@ class Game(object):
         """
         free_columns = self.board.get_incomplete_columns()
         roll_values = self.get_roll_values()
+        temp_columns = self.board.temporary_progress.keys()
 
         # print("Available: {}".format(free_columns))
         # print("Rolls:     {}".format(roll_values))
 
-        # TODO for now assume you have two free markers.
+        # If there are free markers, then the player can still choose
+        # a new column or two new columns.  Otherwise, their rolls
+        # have to overlap the columns they have already chosen on this
+        # turn.  Or they bust out.
         choices = []
         for input_tuple in roll_values:
             output_list = []
-            for element in input_tuple:
-                if element in free_columns:
-                    output_list.append(element)
-            if output_list:
-                choices.append(tuple(output_list))
 
-        # print("Choices:   {}".format(choices))
+            if self.board.free_markers >= 2:
+                for element in input_tuple:
+                    if element in free_columns:
+                        output_list.append(element)
+                if output_list:
+                    choices.append(tuple(output_list))
+                continue
+
+            # TODO needs to know about temp_columns
+            if self.board.free_markers == 1:
+                for element in input_tuple:
+                    if element in free_columns:
+                        choices.append((element,))
+                continue
+
+
+
+        print("Choices:   {}".format(choices))
         return choices
 
     def get_dice_values(self):
@@ -93,7 +108,7 @@ class Game(object):
         else:
             print("The game is on turn {}.".format(self.round_ctr))
 
-    def start(self):
+    def run(self):
         shuffle(self.players)
 
         while not self.game_won:
@@ -118,6 +133,8 @@ class Game(object):
                         The player rolled once to many times.
                         """
                         self.board.reset_progress()
+                        print("Dice roll: {}".format(self.get_dice_values()))
+                        print("Roll values: {}".format(self.get_roll_values()))
                         p.bust_out()
                         is_busted = True
                         continue
@@ -128,6 +145,7 @@ class Game(object):
                     # Right now, the bots don't know how to choose.  So skip them.
                     if not choice:
                         print("Skipping turn of {}".format(p.name))
+                        p.bust_out()
                         is_busted = True
                         self.board.bust_player(p)
                         continue
@@ -157,7 +175,7 @@ class Board(object):
             num_positions = column*2-1
             self.columns[column] = {"intervals": num_positions}
 
-            # Each column has a list ofst positions.  The outer columns
+            # Each column has a list of positions.  The outer columns
             # have less positions.  Each position has a list players at
             # that position.
             for position in range(0, column*2-1+1):
@@ -180,9 +198,11 @@ class Board(object):
 
     def get_status(self):
         # Alternatively, this could return self.columns.
-        return self.player_positions
+        return self.player_positions, self.temporary_progress
 
     def get_incomplete_columns(self):
+        # TODO include the temporary_progress columns in here.
+        #   otherwise, I'm not sure what would happen.
         incomplete_columns = []
         for column in self.columns:
             number_of_intervals = self.columns[column]["intervals"]
@@ -190,6 +210,25 @@ class Board(object):
                 incomplete_columns.append(column)
 
         return incomplete_columns
+
+    @staticmethod
+    def get_status_string(positions):
+        """
+        This is static so other classes can call this.
+        :param positions:
+        :return:
+        """
+        status = "{:>16}".format("")
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            status += "{:>5}".format(column)
+        status += "\n"
+        for p in positions:
+            status += "{:>16}".format(p)
+            for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+                status += "{:>5}".format(positions[p][column - 2])
+            status += "\n"
+
+        return status
 
     def print_status(self):
         """
@@ -201,25 +240,15 @@ class Board(object):
 
         :return:
         """
-        print("{:>16}".format(""), end="")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-            print("{:>5}".format(column), end="")
-        print()
-        for p in self.players:
-            print("{:>16}".format(p.name), end="")
-            for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-                print("{:>5}".format(self.player_positions[p.name][column-2]), end="")
-            print()
-        print()
+        print(Board.get_status_string(self.player_positions))
 
     def bust_player(self, player):
         self.reset_progress()
 
     def register_roll_choice(self, player, choice):
         print("Player chose: {}".format(choice))
-        # PrettyPrinter().pprint(self.columns)
         for column in choice:
-            if choice in self.temporary_progress:
+            if column in self.temporary_progress:
                 # We can assume that if a column is temporarily maxed,
                 # then the player would not have had a chance to choose
                 # it so no need to check for maxed out state here.
@@ -244,21 +273,13 @@ class State(object):
     """
     def __init__(self, choices, board_status, turn):
         self.choices = choices
-        self.board_status = board_status
+        self.player_positions, self.temp_progress = board_status
         self.turn = turn
 
     def display(self):
-        # This block is redundant with Board.print_status().  Dunno.
-        print("{:>16}".format(""), end="")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-            print("{:>5}".format(column), end="")
-        print()
-        for name in self.board_status:
-            print("{:>16}".format(name), end="")
-            for column in range(2, 13):
-                print("{:>5}".format(self.board_status[name][column - 2]), end="")
-            print()
+        print(Board.get_status_string(self.player_positions))
 
+    def print_choices(self):
         print("Turn #{}, your choices are:".format(self.turn))
         for ctr, choice in enumerate(self.choices, start=1):
             print("{}: {}".format(ctr, choice))
@@ -291,7 +312,11 @@ class Player(object):
 class HumanPlayer(Player):
     def choose_columns(self, state):
         state.display()
+        print("Temp: {}".format(state.temp_progress))
+        print("{} free markers".format(3-len(state.temp_progress)))
+        state.print_choices()
 
+        user_input = None
         while True:
             try:
                 user_input = int(input("Enter: "))
@@ -306,7 +331,6 @@ class HumanPlayer(Player):
             break
 
         return state.choices[user_input-1]
-        # return user_input
 
     def stop_or_continue(self, state):
         print("1: Stop\n2: Continue")
