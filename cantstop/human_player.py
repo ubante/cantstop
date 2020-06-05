@@ -4,8 +4,10 @@
 Interactive game.
 """
 import argparse
+import logging
+import sys
 
-from cantstop.all_the_things import HumanPlayer, Board, Game
+from cantstop.all_the_things import HumanPlayer, Game, Player
 from cantstop.bots import SimpleBot
 
 
@@ -19,16 +21,18 @@ Examples:
 '''
     # This is just to generate the usage.
     argparse.ArgumentParser(description=description, epilog=epilog)
+    logging.basicConfig(level=logging.DEBUG,
+                        stream=sys.stdout,
+                        format='%(levelname)s - %(message)s')
+    logging.debug("Starting up....")
 
-    you = HumanPlayer()
-    you.name = "Me"
+    you = HumanPlayer("Me")
     game = Game()
     game.add_player(you)
-    bot1 = SimpleBot()
-    bot1.name = "Bot1"
+    bot1 = SimpleBot("Bot1")
     game.add_player(bot1)
-    game.add_player(SimpleBot())
-    game.start()
+    game.add_player(Player())
+    game.run()
 
     game.print_status()
 

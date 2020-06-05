@@ -12,6 +12,8 @@ Each game contains rounds where each player gets a turn.  Each turn continues
 long as that players gets dice rolls that are valid or that player decides to
 stop and make their progress permanent.
 """
+import logging
+import sys
 
 from collections import defaultdict
 from random import randint, shuffle
@@ -50,8 +52,8 @@ class Game(object):
         roll_values = self.get_roll_values()
         temp_columns = self.board.temporary_progress.keys()
 
-        # print("Available: {}".format(free_columns))
-        # print("Rolls:     {}".format(roll_values))
+        logging.debug("Available: {}".format(free_columns))
+        logging.debug("Rolls:     {}".format(roll_values))
 
         # If there are free markers, then the player can still choose
         # a new column or two new columns.  Otherwise, their rolls
@@ -69,16 +71,13 @@ class Game(object):
                     choices.append(tuple(output_list))
                 continue
 
-            # TODO needs to know about temp_columns
             if self.board.free_markers == 1:
                 for element in input_tuple:
                     if element in free_columns:
                         choices.append((element,))
                 continue
 
-
-
-        print("Choices:   {}".format(choices))
+        logging.debug("Choices:   {}".format(choices))
         return choices
 
     def get_dice_values(self):
@@ -144,7 +143,7 @@ class Game(object):
 
                     # Right now, the bots don't know how to choose.  So skip them.
                     if not choice:
-                        print("Skipping turn of {}".format(p.name))
+                        logging.debug("Skipping turn of {}".format(p.name))
                         p.bust_out()
                         is_busted = True
                         self.board.bust_player(p)
@@ -160,26 +159,84 @@ class Game(object):
                         self.board.register_stop_choice(p)
 
 
+class Column(object):
+    """
+    The column represents a single ladder up the mountain.  The column for dice
+    rolls 2 or 12 are shorter because it's less likely you can climb one rank of
+    this column when compared to the column for dice rolls 6, 7, or 8.
+
+    At each rank, there is a list of players at that rank.  All players start at
+    the zeroth rank of each column.
+    """
+    def __init__(self, num):
+        self.intervals = num
+        self.positions = []  # This will be a list of list of players at each position.
+        self.initialize()
+
+    def initialize(self):
+        for rank in range(0, self.intervals+1):
+            # logging.debug("trying {} rank {}".format(self.intervals, rank))
+            self.positions.append([])
+
+    def add_player(self, name):
+        """
+        Since players start at the bottom of the column, that's where
+        we'll put them.
+        :return:
+        """
+        self.positions[0].append(name)
+
+    def is_complete(self):
+        # TODO not sure which one to keep
+        if self.positions[-1]:
+            return True
+        return False
+
+    def is_incomplete(self):
+        if self.positions[-1]:
+            return False
+        return True
+
+    def get_position(self, name):
+        position = 0
+        for players_at_this_rank in self.positions:
+            if name in players_at_this_rank:
+                return position
+            position += 1
+
+        logging.fatal("Unreachable code.")
+        sys.exit(2)
+
+    def advance(self, name, ranks):
+        logging.debug("Advancing {} {} positions".format(name, ranks))
+
+        current_position = self.get_position(name)
+        future_position = current_position + ranks
+        if future_position > self.intervals:
+            future_position = self.intervals
+
+        self.positions[current_position].remove(name)
+        self.positions[future_position].append(name)
+
+
 class Board(object):
     def __init__(self):
         self.players = []
-        # Tempted to make a column() class to replace this dict of dicts of lists.
         self.columns = {}
-        self.player_positions = {}
         self.temporary_progress = {}
         self.free_markers = 3
         self.initialize()
 
     def initialize(self):
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-            num_positions = column*2-1
-            self.columns[column] = {"intervals": num_positions}
-
-            # Each column has a list of positions.  The outer columns
-            # have less positions.  Each position has a list players at
-            # that position.
-            for position in range(0, column*2-1+1):
-                self.columns[column][position] = []
+            # The columns on the extreme right and left has 3
+            # positions.  The next column in, has 5 positions.  This
+            # continues until the middle column has 13 positions.
+            if column <= 7:
+                num_positions = column*2-1
+            else:
+                num_positions = 27 - (column*2)
+            self.columns[column] = Column(num_positions)
 
     def reset_progress(self):
         self.temporary_progress = {}
@@ -189,24 +246,26 @@ class Board(object):
         self.players.append(p)
 
         # Begin everyone at zero on each column.
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-            self.columns[column][0].append(p.name)
+        for position in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
+            self.columns[position].add_player(p.name)
 
-        # This list could be derived from self.columns but is recorded
-        # for readability.
-        self.player_positions[p.name] = [0] * (Settings.MAX_COLUMN - Settings.MIN_COLUMN + 1)
+    def get_player_positions(self):
+        player_positions = {}
+        for p in self.players:
+            player_positions[p.name] = [0] * (Settings.MAX_COLUMN - Settings.MIN_COLUMN + 1)
+
+        return player_positions
 
     def get_status(self):
         # Alternatively, this could return self.columns.
-        return self.player_positions, self.temporary_progress
+        return self.get_player_positions(), self.temporary_progress
 
     def get_incomplete_columns(self):
         # TODO include the temporary_progress columns in here.
         #   otherwise, I'm not sure what would happen.
         incomplete_columns = []
         for column in self.columns:
-            number_of_intervals = self.columns[column]["intervals"]
-            if not self.columns[column][number_of_intervals]:
+            if self.columns[column].is_incomplete:
                 incomplete_columns.append(column)
 
         return incomplete_columns
@@ -240,7 +299,7 @@ class Board(object):
 
         :return:
         """
-        print(Board.get_status_string(self.player_positions))
+        print(Board.get_status_string(self.get_player_positions()))
 
     def bust_player(self, player):
         self.reset_progress()
@@ -259,7 +318,8 @@ class Board(object):
 
     def register_stop_choice(self, player):
         # Commit the temporary progress.
-
+        for pos in self.temporary_progress:
+            self.columns[pos].advance(player.name, self.temporary_progress[pos])
         self.reset_progress()
 
 
@@ -289,8 +349,11 @@ class Player(object):
     """
     Because this was inevitable.
     """
+    index = 0
+
     def __init__(self):
-        self.name = "NoName"  # TODO use a index suffix here.
+        self.name = "NoName{}".format(Player.index)
+        Player.index += 1
 
     def choose_columns(self, state):
         print("Default player, {}, is passing on choosing columns.".format(self.name))
@@ -310,9 +373,13 @@ class Player(object):
 
 
 class HumanPlayer(Player):
+    def __init__(self, name):
+        super().__init__()
+        self.name = name
+
     def choose_columns(self, state):
         state.display()
-        print("Temp: {}".format(state.temp_progress))
+        logging.debug("TempProgress: {}".format(state.temp_progress))
         print("{} free markers".format(3-len(state.temp_progress)))
         state.print_choices()
 
