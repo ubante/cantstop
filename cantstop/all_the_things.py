@@ -31,6 +31,7 @@ class Game(object):
         self.round_ctr = 0
         self.game_won = False
         self.dice = []
+        self.winner = None
         self.initialize()
 
     def initialize(self):
@@ -107,7 +108,8 @@ class Game(object):
     def print_status(self):
         self.board.print_status()
         if self.game_won:
-            print("The game ended after {} turns.  And the winner is:XXX".format(self.round_ctr))
+            print("The game ended after {} turns.  And the winner is: {}"
+                  .format(self.round_ctr, self.winner))
         else:
             print("The game is on turn {}.".format(self.round_ctr))
 
@@ -115,7 +117,8 @@ class Game(object):
         shuffle(self.players)
 
         while not self.game_won:
-            if self.round_ctr >= 15:
+            # Even with cowards, games are won before 50 rounds.
+            if self.round_ctr >= 50:
                 print("We have played too many rounds - exiting.")
                 break
             self.round_ctr += 1
@@ -162,6 +165,11 @@ class Game(object):
                         do_play = False
                         self.board.register_stop_choice(p)
 
+                    winner = self.board.check_for_winner()
+                    if winner:
+                        self.game_won = True
+                        self.winner = winner
+
 
 class Column(object):
     """
@@ -172,10 +180,10 @@ class Column(object):
     At each rank, there is a list of players at that rank.  All players start at
     the zeroth rank of each column.
     """
-    def __init__(self, num):
+    def __init__(self, nums):
         self.intervals = num
         self.positions = []  # This will be a list of list of players at each position.
-        self.owner = None
+        self.winner = None
         self.initialize()
 
     def __repr__(self):
@@ -184,7 +192,9 @@ class Column(object):
     def _declare_winner(self, name):
         # If this column is completed by a player, then that player
         # is marked the owner.  All other players are removed.
-        self.owner = name
+        self.winner = name
+        print("------- {} has won this column -------".format(name))
+        # logging.debug("{} has won this column".format(name))
         # TODO remove other players
 
     def initialize(self):
@@ -201,15 +211,12 @@ class Column(object):
         self.positions[0].append(name)
 
     def is_complete(self):
-        # TODO not sure which one to keep
         if self.positions[-1]:
             return True
         return False
 
     def is_incomplete(self):
-        if not self.positions[-1]:
-            return False
-        return True
+        return not self.is_complete()
 
     def get_position(self, name):
         position = 0
@@ -230,10 +237,10 @@ class Column(object):
             future_position = self.intervals
 
         logging.debug("Was {}, now {}".format(current_position, future_position))
-        print(self.__repr__())
+        logging.debug(self.__repr__())
         self.positions[current_position].remove(name)
         self.positions[future_position].append(name)
-        print(self.__repr__())
+        logging.debug(self.__repr__())
 
         if self.is_complete():
             self._declare_winner(name)
@@ -290,7 +297,7 @@ class Board(object):
         #   otherwise, I'm not sure what would happen.
         incomplete_columns = []
         for column in self.columns:
-            if self.columns[column].is_incomplete:
+            if self.columns[column].is_incomplete():
                 incomplete_columns.append(column)
 
         return incomplete_columns
@@ -348,9 +355,22 @@ class Board(object):
 
     def register_stop_choice(self, player):
         # Commit the temporary progress.
+        print("Player chose to stop")
         for pos in self.temporary_progress:
             self.columns[pos].advance(player.name, self.temporary_progress[pos])
+
         self.reset_progress()
+
+    def check_for_winner(self):
+        col_winners = defaultdict(int)
+        for col in self.columns:
+            possible_winner = self.columns[col].winner
+            if possible_winner:
+                col_winners[possible_winner] += 1
+                if col_winners[possible_winner] >= 3:
+                    return possible_winner
+
+        return None
 
 
 class State(object):
@@ -377,7 +397,7 @@ class State(object):
 
 class Player(object):
     """
-    Because this was inevitable.
+    Superduperclass
     """
     index = 0
 

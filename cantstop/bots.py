@@ -16,9 +16,11 @@ class CowardBot(Player):
         return 1
 
 
-class SafeBot(Player):
+class SmartCowardBot(CowardBot):
     """
-    This bot prefers columns in the middle of the mountain and will
-    stop when there are no more markers.
+    This bot will only make one choice but it will look for rolls that it
+    already has.
     """
-    pass
+    def choose_columns(self, state):
+
+        return state.choices[0]

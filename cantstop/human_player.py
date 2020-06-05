@@ -8,7 +8,7 @@ import logging
 import sys
 
 from cantstop.all_the_things import HumanPlayer, Game, Player
-from cantstop.bots import CowardBot
+from cantstop.bots import CowardBot, SmartCowardBot
 
 
 def main():
@@ -21,16 +21,18 @@ Examples:
 '''
     # This is just to generate the usage.
     argparse.ArgumentParser(description=description, epilog=epilog)
-    logging.basicConfig(level=logging.DEBUG,
+    logging.basicConfig(level=logging.ERROR,
                         stream=sys.stdout,
                         format='%(levelname)s - %(message)s')
     logging.debug("Starting up....")
 
-    you = HumanPlayer("Me")
     game = Game()
-    game.add_player(you)
+    # you = HumanPlayer("Me")
+    # game.add_player(you)
     bot1 = CowardBot("Cow")
     game.add_player(bot1)
+    bot2 = SmartCowardBot("Donkey")
+    game.add_player(bot2)
     # game.add_player(Player())
     game.run()
 
