@@ -71,9 +71,6 @@ Examples:
     parser.add_argument("--iterations", help="How exact do you want to be?", type=int, default=1000)
     args = parser.parse_args()
 
-    # TODO Given two starting sums, which third sum allows for the greatest number of
-    #   future turns?
-
     print("\nThe odds of each tuple:")
     odds = roll_tuple(args.iterations)
     for o in sorted(odds):

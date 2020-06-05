@@ -8,7 +8,7 @@ import logging
 import sys
 
 from cantstop.all_the_things import HumanPlayer, Game, Player
-from cantstop.bots import SimpleBot
+from cantstop.bots import CowardBot
 
 
 def main():
@@ -29,9 +29,9 @@ Examples:
     you = HumanPlayer("Me")
     game = Game()
     game.add_player(you)
-    bot1 = SimpleBot("Bot1")
+    bot1 = CowardBot("Cow")
     game.add_player(bot1)
-    game.add_player(Player())
+    # game.add_player(Player())
     game.run()
 
     game.print_status()

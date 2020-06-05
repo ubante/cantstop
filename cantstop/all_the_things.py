@@ -59,23 +59,27 @@ class Game(object):
         # a new column or two new columns.  Otherwise, their rolls
         # have to overlap the columns they have already chosen on this
         # turn.  Or they bust out.
+        # TODO this is allowing user to choose a column that is full
         choices = []
-        for input_tuple in roll_values:
-            output_list = []
-
-            if self.board.free_markers >= 2:
+        if self.board.free_markers >= 2:
+            for input_tuple in roll_values:
+                output_list = []
                 for element in input_tuple:
                     if element in free_columns:
                         output_list.append(element)
                 if output_list:
                     choices.append(tuple(output_list))
-                continue
-
+        else:
+            flattened_choices = [item for rv in roll_values for item in rv]
             if self.board.free_markers == 1:
-                for element in input_tuple:
+                for element in flattened_choices:
                     if element in free_columns:
                         choices.append((element,))
-                continue
+            else:
+                for element in flattened_choices:
+                    if element in free_columns:
+                        if element in temp_columns:
+                            choices.append((element,))
 
         logging.debug("Choices:   {}".format(choices))
         return choices
@@ -111,7 +115,7 @@ class Game(object):
         shuffle(self.players)
 
         while not self.game_won:
-            if self.round_ctr >= 2:
+            if self.round_ctr >= 15:
                 print("We have played too many rounds - exiting.")
                 break
             self.round_ctr += 1
@@ -149,7 +153,7 @@ class Game(object):
                         self.board.bust_player(p)
                         continue
 
-                    self.board.register_roll_choice(p, choice)
+                    self.board.register_roll_choice(choice)
 
                     # Do I need to send the state for this?
                     state = State(roll_choices, self.board.get_status(), self.round_ctr)
@@ -171,7 +175,17 @@ class Column(object):
     def __init__(self, num):
         self.intervals = num
         self.positions = []  # This will be a list of list of players at each position.
+        self.owner = None
         self.initialize()
+
+    def __repr__(self):
+        return self.positions
+
+    def _declare_winner(self, name):
+        # If this column is completed by a player, then that player
+        # is marked the owner.  All other players are removed.
+        self.owner = name
+        # TODO remove other players
 
     def initialize(self):
         for rank in range(0, self.intervals+1):
@@ -193,7 +207,7 @@ class Column(object):
         return False
 
     def is_incomplete(self):
-        if self.positions[-1]:
+        if not self.positions[-1]:
             return False
         return True
 
@@ -215,8 +229,14 @@ class Column(object):
         if future_position > self.intervals:
             future_position = self.intervals
 
+        logging.debug("Was {}, now {}".format(current_position, future_position))
+        print(self.__repr__())
         self.positions[current_position].remove(name)
         self.positions[future_position].append(name)
+        print(self.__repr__())
+
+        if self.is_complete():
+            self._declare_winner(name)
 
 
 class Board(object):
@@ -254,6 +274,11 @@ class Board(object):
         for p in self.players:
             player_positions[p.name] = [0] * (Settings.MAX_COLUMN - Settings.MIN_COLUMN + 1)
 
+        for c in self.columns:
+            for rank, players_at_this_rank in enumerate(self.columns[c].positions):
+                for p in players_at_this_rank:
+                    player_positions[p][c-2] = rank
+
         return player_positions
 
     def get_status(self):
@@ -284,7 +309,12 @@ class Board(object):
         for p in positions:
             status += "{:>16}".format(p)
             for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
-                status += "{:>5}".format(positions[p][column - 2])
+                # Use a period instead of a '0' to make the chart
+                # more readable.
+                if positions[p][column - 2]:
+                    status += "{:>5}".format(positions[p][column - 2])
+                else:
+                    status += "{:>5}".format('.')
             status += "\n"
 
         return status
@@ -304,7 +334,7 @@ class Board(object):
     def bust_player(self, player):
         self.reset_progress()
 
-    def register_roll_choice(self, player, choice):
+    def register_roll_choice(self, choice):
         print("Player chose: {}".format(choice))
         for column in choice:
             if column in self.temporary_progress:
