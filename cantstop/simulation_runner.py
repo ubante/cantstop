@@ -17,11 +17,11 @@ Play a solo game.
 '''
     epilog = '''
 Examples:
-./human_player.py
+./simulation_runner.py
 '''
     # This is just to generate the usage.
     argparse.ArgumentParser(description=description, epilog=epilog)
-    logging.basicConfig(level=logging.ERROR,
+    logging.basicConfig(level=logging.DEBUG,
                         stream=sys.stdout,
                         format='%(levelname)s - %(message)s')
     logging.debug("Starting up....")

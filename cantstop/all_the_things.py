@@ -181,7 +181,7 @@ class Column(object):
     the zeroth rank of each column.
     """
     def __init__(self, nums):
-        self.intervals = num
+        self.intervals = nums
         self.positions = []  # This will be a list of list of players at each position.
         self.winner = None
         self.initialize()
@@ -375,8 +375,6 @@ class Board(object):
 
 class State(object):
     """
-    Dunno about this.
-
     The players are presented with the game state when the player has a chance
     to act.  The state is composed of the game board and the available column
     choices.
