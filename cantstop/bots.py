@@ -47,3 +47,9 @@ class SmartCowardBot(CowardBot):
         logging.debug("SMART: overlap = {}".format(overlap))
         best_choice_index = max(overlap, key=overlap.get)
         return state.choices[best_choice_index]
+
+
+class ConservativeBot(Player):
+    """
+    This bot will continue to play until all markers are used.
+    """

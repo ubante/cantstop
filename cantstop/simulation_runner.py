@@ -7,7 +7,7 @@ import argparse
 import logging
 import sys
 
-from cantstop.all_the_things import HumanPlayer, Game, Player
+from cantstop.all_the_things import HumanPlayer, Game
 from cantstop.bots import CowardBot, SmartCowardBot
 
 
@@ -33,7 +33,7 @@ Examples:
     game.add_player(bot1)
     bot2 = SmartCowardBot("Donkey")
     game.add_player(bot2)
-    # game.add_player(Player())
+    game.add_player(CowardBot("Elephant"))
     game.run()
 
     game.print_status()
@@ -41,8 +41,7 @@ Examples:
 
 def test():
     game = Game()
-    you = HumanPlayer()
-    you.name = "Me"
+    you = HumanPlayer("Me")
     game.add_player(you)
 
     game.roll_dice()

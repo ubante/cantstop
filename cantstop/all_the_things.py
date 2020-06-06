@@ -153,7 +153,7 @@ class Game(object):
                         logging.debug("Skipping turn of {}".format(p.name))
                         p.bust_out()
                         is_busted = True
-                        self.board.bust_player(p)
+                        self.board.bust_player()
                         continue
 
                     self.board.register_roll_choice(choice)
@@ -180,11 +180,18 @@ class Column(object):
     At each rank, there is a list of players at that rank.  All players start at
     the zeroth rank of each column.
     """
-    def __init__(self, nums):
+    def __init__(self, nums, column_number):
+        """
+
+        :param nums: The number of ranks in this column.
+        :param column_number: The die roll that corresponds to this column, eg
+        7 or 12.
+        """
         self.intervals = nums
+        self.column_number = column_number
         self.positions = []  # This will be a list of list of players at each position.
         self.winner = None
-        self.initialize()
+        self.initialize_positions()
 
     def __repr__(self):
         return self.positions
@@ -193,11 +200,14 @@ class Column(object):
         # If this column is completed by a player, then that player
         # is marked the owner.  All other players are removed.
         self.winner = name
-        print("------- {} has won this column -------".format(name))
-        # logging.debug("{} has won this column".format(name))
-        # TODO remove other players
+        print("------- {} has won column {} -------".format(name, self.column_number))
 
-    def initialize(self):
+        # Remove other players
+        self.initialize_positions()
+        self.positions[-1] = [self.winner]
+
+    def initialize_positions(self):
+        self.positions = []
         for rank in range(0, self.intervals+1):
             # logging.debug("trying {} rank {}".format(self.intervals, rank))
             self.positions.append([])
@@ -263,7 +273,7 @@ class Board(object):
                 num_positions = column*2-1
             else:
                 num_positions = 27 - (column*2)
-            self.columns[column] = Column(num_positions)
+            self.columns[column] = Column(num_positions, column)
 
     def reset_progress(self):
         self.temporary_progress = {}
@@ -293,8 +303,6 @@ class Board(object):
         return self.get_player_positions(), self.temporary_progress
 
     def get_incomplete_columns(self):
-        # TODO include the temporary_progress columns in here.
-        #   otherwise, I'm not sure what would happen.
         incomplete_columns = []
         for column in self.columns:
             if self.columns[column].is_incomplete():
@@ -309,19 +317,49 @@ class Board(object):
         :param positions:
         :return:
         """
+        # Generate the header rows.
         status = "{:>16}".format("")
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
             status += "{:>5}".format(column)
         status += "\n"
-        for p in positions:
-            status += "{:>16}".format(p)
+        status += "{:>16}".format("")
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            if column < 10:
+                status += "{:>5}".format("-")
+            else:
+                status += "{:>5}".format("--")
+        status += "\n"
+
+        # To denote columns that have been won, we have to infer the
+        # completed columns since we are not given direct access to
+        # the Board().
+        completed_columns = {}
+        player_completed_columns = defaultdict(int)
+        for player_name in positions:
             for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+                # This is the number of ranks in this column.
+                ranks = column * 2 - 1
+                if positions[player_name][column - 2] == ranks:
+                    completed_columns[column] = player_name
+                    player_completed_columns[player_name] += 1
+
+        # Generate the position matrix.
+        for player_name in positions:
+            name_score = "{} ({})".format(player_name, player_completed_columns[player_name])
+            status += "{:>16}".format(name_score)
+            for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+                # Use pipes to mark completed columns won by another player.
+                if column in completed_columns and completed_columns[column] != player_name:
+                    status += "{:>5}".format('||')
+                    continue
+
                 # Use a period instead of a '0' to make the chart
                 # more readable.
-                if positions[p][column - 2]:
-                    status += "{:>5}".format(positions[p][column - 2])
-                else:
-                    status += "{:>5}".format('.')
+                if positions[player_name][column - 2]:
+                    status += "{:>5}".format(positions[player_name][column - 2])
+                    continue
+
+                status += "{:>5}".format('.')
             status += "\n"
 
         return status
@@ -338,7 +376,7 @@ class Board(object):
         """
         print(Board.get_status_string(self.get_player_positions()))
 
-    def bust_player(self, player):
+    def bust_player(self):
         self.reset_progress()
 
     def register_roll_choice(self, choice):
