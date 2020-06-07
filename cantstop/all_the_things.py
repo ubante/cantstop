@@ -123,7 +123,7 @@ class Game(object):
                 break
             self.round_ctr += 1
 
-            print("We have begun round #{}:".format(self.round_ctr))
+            print("\n===== We have begun round #{} =====".format(self.round_ctr))
 
             for p in self.players:
                 print("{}'s turn:".format(p.name))
@@ -266,14 +266,26 @@ class Board(object):
 
     def initialize(self):
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-            # The columns on the extreme right and left has 3
-            # positions.  The next column in, has 5 positions.  This
-            # continues until the middle column has 13 positions.
-            if column <= 7:
-                num_positions = column*2-1
-            else:
-                num_positions = 27 - (column*2)
+            # # The columns on the extreme right and left has 3
+            # # positions.  The next column in, has 5 positions.  This
+            # # continues until the middle column has 13 positions.
+            # if column <= 7:
+            #     num_positions = column*2-1
+            # else:
+            #     num_positions = 27 - (column*2)
+            num_positions = Board.get_ranks_by_column((column))
             self.columns[column] = Column(num_positions, column)
+
+    @staticmethod
+    def get_ranks_by_column(column):
+        # The columns on the extreme right and left has 3
+        # positions.  The next column in, has 5 positions.  This
+        # continues until the middle column has 13 positions.
+        if column <= 7:
+            num_positions = column * 2 - 1
+        else:
+            num_positions = 27 - (column * 2)
+        return num_positions
 
     def reset_progress(self):
         self.temporary_progress = {}
@@ -330,15 +342,16 @@ class Board(object):
                 status += "{:>5}".format("--")
         status += "\n"
 
-        # To denote columns that have been won, we have to infer the
+        # To find columns that have been won, we have to infer the
         # completed columns since we are not given direct access to
-        # the Board().
+        # the Board() object.
         completed_columns = {}
         player_completed_columns = defaultdict(int)
         for player_name in positions:
             for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
                 # This is the number of ranks in this column.
-                ranks = column * 2 - 1
+                # ranks = column * 2 - 1  # TODO this is wrong for the right hand side
+                ranks = Board.get_ranks_by_column(column)
                 if positions[player_name][column - 2] == ranks:
                     completed_columns[column] = player_name
                     player_completed_columns[player_name] += 1
@@ -435,7 +448,7 @@ class Player(object):
     """
     Superduperclass
     """
-    index = 0
+    index = 0  # To make the generic name unique.
 
     def __init__(self):
         self.name = "NoName{}".format(Player.index)
@@ -603,3 +616,4 @@ class SingleValueOdds(object):
         else:
             print("The roll of {} is impossible with two 6-sided dice.".format(roll))
             return 0
+

@@ -27,14 +27,14 @@ class SmartCowardBot(CowardBot):
     """
     def choose_columns(self, state):
         state.display()
-        my_position = state.player_positions[self.name]
-        logging.debug("SMART: position = {}".format(my_position))
 
+        my_position = state.player_positions[self.name]
+        # logging.debug("SCB: position = {}".format(my_position))
         chosen_cols = []
         for col_num, value in enumerate(my_position, start=2):
             if value:
                 chosen_cols.append(col_num)
-        logging.debug("SMART: chosen_cols = {}".format(chosen_cols))
+        # logging.debug("SCB: chosen_cols = {}".format(chosen_cols))
 
         overlap = {}
         for i, choice_tup in enumerate(state.choices):
@@ -44,12 +44,19 @@ class SmartCowardBot(CowardBot):
                     match_ctr += 1
             overlap[i] = match_ctr
 
-        logging.debug("SMART: overlap = {}".format(overlap))
+        # logging.debug("SCB: overlap = {}".format(overlap))
         best_choice_index = max(overlap, key=overlap.get)
         return state.choices[best_choice_index]
 
 
 class ConservativeBot(Player):
     """
-    This bot will continue to play until all markers are used.
+    This bot will:
+    - stop when there are no free markers
+    - will try to delay using all the markers
+    - put the first marker close to the middle
+    - put the last marker close to the sides
+    - not consider column rank
+    - not consider opponents
     """
+
