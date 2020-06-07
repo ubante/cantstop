@@ -26,15 +26,9 @@ class SmartCowardBot(CowardBot):
     This class beats CowardBot 90% of the time.
     """
     def choose_columns(self, state):
-        state.display()
-
-        my_position = state.player_positions[self.name]
-        # logging.debug("SCB: position = {}".format(my_position))
-        chosen_cols = []
-        for col_num, value in enumerate(my_position, start=2):
-            if value:
-                chosen_cols.append(col_num)
-        # logging.debug("SCB: chosen_cols = {}".format(chosen_cols))
+        if logging.root.level <= logging.DEBUG:
+            state.display()
+        chosen_cols = state.get_current_columns(self.name)
 
         overlap = {}
         for i, choice_tup in enumerate(state.choices):
@@ -44,7 +38,7 @@ class SmartCowardBot(CowardBot):
                     match_ctr += 1
             overlap[i] = match_ctr
 
-        # logging.debug("SCB: overlap = {}".format(overlap))
+        logging.debug("SCB: overlap = {}".format(overlap))
         best_choice_index = max(overlap, key=overlap.get)
         return state.choices[best_choice_index]
 
@@ -59,4 +53,22 @@ class ConservativeBot(Player):
     - not consider column rank
     - not consider opponents
     """
+    def __init__(self, name):
+        super().__init__()
+        self.name = name
 
+    def choose_columns(self, state):
+        state.display()
+        chosen_cols = state.get_current_columns(self.name)
+
+        overlap = {}
+        for i, choice_tup in enumerate(state.choices):
+            match_ctr = 0
+            for choice in choice_tup:
+                if choice in chosen_cols:
+                    match_ctr += 1
+            overlap[i] = match_ctr
+
+        logging.info("CB: overlap = {}".format(overlap))
+        best_choice_index = max(overlap, key=overlap.get)
+        return state.choices[best_choice_index]

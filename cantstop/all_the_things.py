@@ -443,6 +443,17 @@ class State(object):
         for ctr, choice in enumerate(self.choices, start=1):
             print("{}: {}".format(ctr, choice))
 
+    def get_current_columns(self, name):
+        my_position = self.player_positions[name]
+        logging.debug("SCB: position = {}".format(my_position))
+        chosen_cols = []
+        for col_num, value in enumerate(my_position, start=2):
+            if value:
+                chosen_cols.append(col_num)
+        logging.debug("SCB: chosen_cols = {}".format(chosen_cols))
+
+        return chosen_cols
+
 
 class Player(object):
     """
