@@ -148,7 +148,7 @@ class Game(object):
 
                     state = State(roll_choices, self.board.get_status(), self.round_ctr)
                     choice = p.choose_columns(state)
-                    self.board.register_roll_choice(choice)
+                    self.board.register_roll_choice(choice, p.name)
 
                     state = State(roll_choices, self.board.get_status(), self.round_ctr)
                     choice = p.stop_or_continue(state)
@@ -156,10 +156,11 @@ class Game(object):
                         do_play = False
                         self.board.register_stop_choice(p)
 
-                    winner = self.board.check_for_winner()
-                    if winner:
-                        self.game_won = True
-                        self.winner = winner
+                        winner = self.board.check_for_winner()
+                        if winner:
+                            self.game_won = True
+                            self.winner = winner
+                            return
 
 
 class Column(object):
@@ -374,8 +375,10 @@ class Board(object):
     def bust_player(self):
         self.reset_progress()
 
-    def register_roll_choice(self, choice):
-        print("Player chose: {}".format(choice))
+    def register_roll_choice(self, choice, name=None):
+        if not name:
+            name = "Player"
+        print("{} chose: {}".format(name, choice))
         for column in choice:
             if column in self.temporary_progress:
                 # We can assume that if a column is temporarily maxed,
@@ -444,6 +447,9 @@ class Player(object):
     index = 0  # To make the generic name unique.
 
     def __init__(self):
+        """
+        I really don't want the base class to require a name.
+        """
         self.name = "NoName{}".format(Player.index)
         Player.index += 1
 

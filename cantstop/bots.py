@@ -3,16 +3,21 @@ import logging
 from cantstop.all_the_things import Player
 
 
-class CowardBot(Player):
+class NamedPlayer(Player):
     """
-    This bot will always choose the first combination and then stop.
-
-    Head to head against SCB, this class wins 1 out of 10 matches.
+    Getting spicey.
     """
     def __init__(self, name):
         super().__init__()
         self.name = name
 
+
+class CowardBot(NamedPlayer):
+    """
+    This bot will always choose the first combination and then stop.
+
+    Head to head against SCB, this class wins 1 out of 10 matches.
+    """
     def choose_columns(self, state):
         return state.choices[0]
 
@@ -46,15 +51,11 @@ class SmartCowardBot(CowardBot):
         return state.choices[best_choice_index]
 
 
-class ConservativeBot(Player):
+class ConservativeBot(NamedPlayer):
     """
     This bot will:
     - stop when there are no free markers
     """
-    def __init__(self, name):
-        super().__init__()
-        self.name = name
-
     def choose_columns(self, state):
         state.display()
         chosen_cols = state.get_current_columns(self.name)
@@ -88,6 +89,13 @@ class SmartConservativeBot(ConservativeBot):
         - will try to delay using all the markers
         - put the first marker close to the middle
         - put the last marker close to the sides
+        - will stop if temp_progress wins the game even if there are extra markers
         - not consider column rank
         - not consider opponents
+    """
+
+
+class QuadRollerBot(Player):
+    """
+    Wow, indent needed, even if it's a comment.
     """
