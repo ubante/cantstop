@@ -61,6 +61,7 @@ class Game(object):
         # have to overlap the columns they have already chosen on this
         # turn.  Or they bust out.
         # TODO this is allowing user to choose a column that is full
+        #   confirmed that a temp_progress column that is full cannot be can option
         choices = []
         if self.board.free_markers >= 2:
             for input_tuple in roll_values:
@@ -147,18 +148,8 @@ class Game(object):
 
                     state = State(roll_choices, self.board.get_status(), self.round_ctr)
                     choice = p.choose_columns(state)
-
-                    # Right now, the bots don't know how to choose.  So skip them.
-                    if not choice:
-                        logging.debug("Skipping turn of {}".format(p.name))
-                        p.bust_out()
-                        is_busted = True
-                        self.board.bust_player()
-                        continue
-
                     self.board.register_roll_choice(choice)
 
-                    # Do I need to send the state for this?
                     state = State(roll_choices, self.board.get_status(), self.round_ctr)
                     choice = p.stop_or_continue(state)
                     if choice == 1:
@@ -266,14 +257,7 @@ class Board(object):
 
     def initialize(self):
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-            # # The columns on the extreme right and left has 3
-            # # positions.  The next column in, has 5 positions.  This
-            # # continues until the middle column has 13 positions.
-            # if column <= 7:
-            #     num_positions = column*2-1
-            # else:
-            #     num_positions = 27 - (column*2)
-            num_positions = Board.get_ranks_by_column((column))
+            num_positions = Board.get_ranks_by_column(column)
             self.columns[column] = Column(num_positions, column)
 
     @staticmethod
@@ -330,11 +314,11 @@ class Board(object):
         :return:
         """
         # Generate the header rows.
-        status = "{:>16}".format("")
+        status = "{:>19}".format("")
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
             status += "{:>5}".format(column)
         status += "\n"
-        status += "{:>16}".format("")
+        status += "{:>19}".format("")
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
             if column < 10:
                 status += "{:>5}".format("-")
@@ -349,8 +333,6 @@ class Board(object):
         player_completed_columns = defaultdict(int)
         for player_name in positions:
             for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
-                # This is the number of ranks in this column.
-                # ranks = column * 2 - 1  # TODO this is wrong for the right hand side
                 ranks = Board.get_ranks_by_column(column)
                 if positions[player_name][column - 2] == ranks:
                     completed_columns[column] = player_name
@@ -359,7 +341,7 @@ class Board(object):
         # Generate the position matrix.
         for player_name in positions:
             name_score = "{} ({})".format(player_name, player_completed_columns[player_name])
-            status += "{:>16}".format(name_score)
+            status += "{:>19}".format(name_score)
             for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
                 # Use pipes to mark completed columns won by another player.
                 if column in completed_columns and completed_columns[column] != player_name:
@@ -627,4 +609,3 @@ class SingleValueOdds(object):
         else:
             print("The roll of {} is impossible with two 6-sided dice.".format(roll))
             return 0
-

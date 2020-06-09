@@ -9,7 +9,7 @@ import sys
 from collections import defaultdict
 
 from cantstop.all_the_things import Game
-from cantstop.bots import CowardBot, SmartCowardBot, ConservativeBot
+from cantstop.bots import CowardBot, SmartCowardBot, ConservativeBot, SmartConservativeBot
 
 
 def set_logger(verbose_level):
@@ -44,8 +44,8 @@ Examples:
 '''
     parser = argparse.ArgumentParser(description=description,
                                      epilog=epilog)
-    parser.add_argument("-i", "--iteration", help="How many times to run?", type=int, default=100)
-    parser.add_argument("-v", "--verbose", help="Print info/debug", action="count", default=2)
+    parser.add_argument("-i", "--iteration", help="How many times to run?", type=int, default=1000)
+    parser.add_argument("-v", "--verbose", help="Print info/debug", action="count", default=1)
     args = parser.parse_args()
     set_logger(args.verbose)
 
@@ -55,7 +55,8 @@ Examples:
     for i in range(0, args.iteration):
 
         game = Game()
-        players = [CowardBot, SmartCowardBot]
+        # players = [CowardBot, SmartCowardBot]
+        players = [SmartCowardBot, ConservativeBot, SmartConservativeBot]
         for player in players:
             name = player.__name__
             game.add_player(player(name))
