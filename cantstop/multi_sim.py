@@ -9,14 +9,13 @@ import sys
 from collections import defaultdict
 
 from cantstop.all_the_things import Game
-from cantstop.bots import CowardBot, SmartCowardBot, ConservativeBot, SmartConservativeBot
+from cantstop.bots import SmartCowardBot, ConservativeBot, QuadRollerBot
 
 
 def set_logger(verbose_level):
     """
     Initialize the logger.  The verbose_level should be in [0, 1, 2].
     This won't return anything but will reconfigure the root logger.
-    :param logfile_name:
     :param verbose_level:
     :return:
     """
@@ -55,8 +54,7 @@ Examples:
     for i in range(0, args.iteration):
 
         game = Game()
-        # players = [CowardBot, SmartCowardBot]
-        players = [SmartCowardBot, ConservativeBot, SmartConservativeBot]
+        players = [SmartCowardBot, ConservativeBot, QuadRollerBot]
         for player in players:
             name = player.__name__
             game.add_player(player(name))

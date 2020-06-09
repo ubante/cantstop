@@ -430,12 +430,12 @@ class State(object):
 
     def get_current_columns(self, name):
         my_position = self.player_positions[name]
-        logging.debug("SCB: position = {}".format(my_position))
+        logging.debug("Position = {}".format(my_position))
         chosen_cols = []
         for col_num, value in enumerate(my_position, start=2):
             if value:
                 chosen_cols.append(col_num)
-        logging.debug("SCB: chosen_cols = {}".format(chosen_cols))
+        logging.debug("Chosen_cols = {}".format(chosen_cols))
 
         return chosen_cols
 
@@ -468,6 +468,29 @@ class Player(object):
 
     def bust_out(self):
         print("Player {} has busted out.".format(self.name))
+
+    def choose_already_selected_columns(self, state):
+        """
+        This will prioritize choosing a column if it has already
+        been chosen in the past.  If there's a choice to advance
+        two ranks in a column, then that choise will be taken.
+
+        :param state:
+        :return:
+        """
+        if logging.root.level <= logging.DEBUG:
+            state.display()
+
+        chosen_cols = state.get_current_columns(self.name)
+        overlap = {}
+        for i, choice_tup in enumerate(state.choices):
+            match_ctr = 0
+            for choice in choice_tup:
+                if choice in chosen_cols:
+                    match_ctr += 1
+            overlap[i] = match_ctr
+        best_choice_index = max(overlap, key=overlap.get)
+        return state.choices[best_choice_index]
 
 
 class HumanPlayer(Player):

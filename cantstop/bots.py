@@ -95,7 +95,40 @@ class SmartConservativeBot(ConservativeBot):
     """
 
 
-class QuadRollerBot(Player):
+class QuadRollerBot(NamedPlayer):
     """
-    Wow, indent needed, even if it's a comment.
+    This bot will:
+        - choose columns it has already chosen
+        - roll four times
+
+    Results:
+After 1000 iterations, here are the winners:
+defaultdict(<class 'int'>, {'QuadRollerBot': 647, 'ConservativeBot': 352, 'SmartCowardBot': 1})
     """
+    def __init__(self, name):
+        super().__init__(name)
+        self.risk_budget = None
+        self.sub_turn = None
+        self.end_of_turn_cleanup()
+
+    def end_of_turn_cleanup(self):
+        self.risk_budget = 4
+        self.sub_turn = 0
+
+    def choose_columns(self, state):
+        self.sub_turn += 1
+        logging.debug("{}'s sub-turn #{}".format(self.name, self.sub_turn))
+        return self.choose_already_selected_columns(state)
+
+    def stop_or_continue(self, state):
+        if self.risk_budget == 1:
+            logging.debug("The Quad Roller has run out of steam - stopping.")
+            self.end_of_turn_cleanup()
+            return 1
+
+        self.risk_budget -= 1
+        return 2
+
+    def bust_out(self):
+        super().bust_out()
+        self.end_of_turn_cleanup()
