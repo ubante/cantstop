@@ -118,12 +118,7 @@ class Game(object):
         shuffle(self.players)
 
         while not self.game_won:
-            # Even with cowards, games are won before 50 rounds.
-            if self.round_ctr >= 50:
-                print("We have played too many rounds - exiting.")
-                break
             self.round_ctr += 1
-
             print("\n===== We have begun round #{} =====".format(self.round_ctr))
 
             for p in self.players:
@@ -140,8 +135,8 @@ class Game(object):
                         The player rolled once to many times.
                         """
                         self.board.reset_progress()
-                        print("Dice roll: {}".format(self.get_dice_values()))
-                        print("Roll values: {}".format(self.get_roll_values()))
+                        logging.debug("Dice roll: {}".format(self.get_dice_values()))
+                        logging.debug("Roll values: {}".format(self.get_roll_values()))
                         p.bust_out()
                         is_busted = True
                         continue
@@ -443,6 +438,13 @@ class State(object):
 class Player(object):
     """
     Superduperclass
+
+    These are the things a bot could do:
+        - try to delay using all the markers
+        - put the first marker close to the middle
+        - put the last marker close to the sides
+        - will stop if temp_progress wins the game even if there are extra markers
+        - score the temp_progress gains against the possible chance of busting out
     """
     index = 0  # To make the generic name unique.
 

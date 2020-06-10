@@ -9,7 +9,7 @@ import sys
 from collections import defaultdict
 
 from cantstop.all_the_things import Game
-from cantstop.bots import SmartCowardBot, ConservativeBot, QuadRollerBot
+from cantstop.bots import QuadRollerBot, HexRollerBot, OctoRollerBot, SeptaRollerBot, DecaRollerBot
 
 
 def set_logger(verbose_level):
@@ -52,9 +52,9 @@ Examples:
 
     chicken_dinner = defaultdict(int)
     for i in range(0, args.iteration):
-
+        print("\n>>>>>>\n>>>>>> Simulation #{}/{} <<<<<<\n>>>>>>".format(i+1, args.iteration))
         game = Game()
-        players = [SmartCowardBot, ConservativeBot, QuadRollerBot]
+        players = [HexRollerBot, DecaRollerBot]
         for player in players:
             name = player.__name__
             game.add_player(player(name))

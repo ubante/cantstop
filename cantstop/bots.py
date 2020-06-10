@@ -85,34 +85,32 @@ class ConservativeBot(NamedPlayer):
 
 class SmartConservativeBot(ConservativeBot):
     """
-    This bot will:
-        - will try to delay using all the markers
-        - put the first marker close to the middle
-        - put the last marker close to the sides
-        - will stop if temp_progress wins the game even if there are extra markers
-        - not consider column rank
-        - not consider opponents
+    This bot will....
     """
 
 
-class QuadRollerBot(NamedPlayer):
+class RollerBot(NamedPlayer):
     """
     This bot will:
         - choose columns it has already chosen
-        - roll four times
+        - roll X times
 
-    Results:
-After 1000 iterations, here are the winners:
-defaultdict(<class 'int'>, {'QuadRollerBot': 647, 'ConservativeBot': 352, 'SmartCowardBot': 1})
+    Results: HexRB is the best.
+After 10000 iterations, here are the winners:
+defaultdict(<class 'int'>, {'QuadRollerBot': 2311, 'OctoRollerBot': 2657, 'DecaRollerBot': 2079, 'HexRollerBot': 2953})
+
+    It's a valid argument to say that subclasses could be composed.  But I want
+    the class name to be different in multi_sim.
     """
-    def __init__(self, name):
+    def __init__(self, name, budget):
         super().__init__(name)
+        self.fixed_budget = budget
         self.risk_budget = None
         self.sub_turn = None
         self.end_of_turn_cleanup()
 
     def end_of_turn_cleanup(self):
-        self.risk_budget = 4
+        self.risk_budget = self.fixed_budget
         self.sub_turn = 0
 
     def choose_columns(self, state):
@@ -122,7 +120,7 @@ defaultdict(<class 'int'>, {'QuadRollerBot': 647, 'ConservativeBot': 352, 'Smart
 
     def stop_or_continue(self, state):
         if self.risk_budget == 1:
-            logging.debug("The Quad Roller has run out of steam - stopping.")
+            logging.debug("{}} has run out of steam - stopping.".format(self.name))
             self.end_of_turn_cleanup()
             return 1
 
@@ -132,3 +130,28 @@ defaultdict(<class 'int'>, {'QuadRollerBot': 647, 'ConservativeBot': 352, 'Smart
     def bust_out(self):
         super().bust_out()
         self.end_of_turn_cleanup()
+
+
+class QuadRollerBot(RollerBot):
+    def __init__(self, name):
+        super().__init__(name, 4)
+
+
+class HexRollerBot(RollerBot):
+    def __init__(self, name):
+        super().__init__(name, 6)
+
+
+class SeptaRollerBot(RollerBot):
+    def __init__(self, name):
+        super().__init__(name, 7)
+
+
+class OctoRollerBot(RollerBot):
+    def __init__(self, name):
+        super().__init__(name, 8)
+
+
+class DecaRollerBot(RollerBot):
+    def __init__(self, name):
+        super().__init__(name, 10)
