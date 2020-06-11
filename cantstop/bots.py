@@ -120,7 +120,7 @@ defaultdict(<class 'int'>, {'QuadRollerBot': 2311, 'OctoRollerBot': 2657, 'DecaR
 
     def stop_or_continue(self, state):
         if self.risk_budget == 1:
-            logging.debug("{}} has run out of steam - stopping.".format(self.name))
+            logging.debug("{} has run out of steam - stopping.".format(self.name))
             self.end_of_turn_cleanup()
             return 1
 
