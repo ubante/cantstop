@@ -1,18 +1,54 @@
 #!/usr/bin/env python
 
 """
-Which starting three should I be happy with?
+Collection of stat functions.
+
+Answer questions like:
+- Given two sums, which third sum maximizes a hit in the following attempt.
+- Given a temp_progress position, should player stop or continue.
 """
 
 import argparse
 from collections import defaultdict
+from random import randint
 
-from cantstop.all_the_things import Die
+
+class Die(object):
+    """
+    This might be overkill.
+    """
+    def __init__(self):
+        self.value = None
+        self.roll()
+
+    def roll(self):
+        self.value = randint(1, 6)
+
+
+class Dice(object):
+    """
+    A set of dice.
+    """
+    def __init__(self):
+        self._dice = []
+        self.count = 4
+        for i in range(0, self.count):
+            self._dice.append(Die())
+        self.roll()
+
+    def roll(self):
+        for d in self._dice:
+            d.roll()
 
 
 class RollSet(object):
+    """
+    All the possible ways to sum four dice.
+    """
     def __init__(self):
         self.possibilities = defaultdict(int)
+        self.poss_ctr = 0
+        self.roll_combinations = 6*6*6*6
         for a in range(1, 7):
             for b in range(1, 7):
                 for c in range(1, 7):
@@ -26,29 +62,10 @@ class RollSet(object):
                         total[c+d] = 1
                         for t in total:
                             self.possibilities[t] += 1
+                            self.poss_ctr += 1
 
 
-def roll(iterations):
-    odds = {}
-    for i in range(2, 13):
-        odds[i] = 0
-    dice = [Die(), Die(), Die(), Die()]
-
-    for i in range(0, iterations):
-        for d in dice:
-            d.roll()
-
-        odds[dice[0].value+dice[1].value] += 1
-        odds[dice[0].value+dice[2].value] += 1
-        odds[dice[0].value+dice[3].value] += 1
-        odds[dice[1].value+dice[2].value] += 1
-        odds[dice[1].value+dice[3].value] += 1
-        odds[dice[2].value+dice[3].value] += 1
-
-    return odds
-
-
-def roll_tuple(iterations):
+def roll_the_dice(iterations):
     odds = {}
     dice = [Die(), Die(), Die(), Die()]
 
@@ -68,6 +85,31 @@ def roll_tuple(iterations):
     return odds
 
 
+def roll_the_dice_2(iterations):
+    odds = {}
+    for i in range(2, 13):
+        odds[i] = 0
+    dice = [Die(), Die(), Die(), Die()]
+
+    for i in range(0, iterations):
+        for d in dice:
+            d.roll()
+
+        odds[dice[0].value+dice[1].value] += 1
+        odds[dice[0].value+dice[2].value] += 1
+        odds[dice[0].value+dice[3].value] += 1
+        odds[dice[1].value+dice[2].value] += 1
+        odds[dice[1].value+dice[3].value] += 1
+        odds[dice[2].value+dice[3].value] += 1
+
+    return odds
+
+
+def perc(numerator, denominator):
+    fraction = numerator/denominator*100
+    return "{:3.1f}%".format(fraction)
+
+
 def main():
     description = '''
 Just go.
@@ -83,23 +125,25 @@ Examples:
 
     # First method
     print("\nThe odds of each tuple:")
-    odds = roll_tuple(args.iterations)
+    odds = roll_the_dice(args.iterations)
     for o in sorted(odds):
-        print("{}, {}, {}".format(o[0], o[1], odds[o]))
+        print("{}, {}, {}".format(o[0], o[1], perc(odds[o], args.iterations)))
 
     print("Another way to see this is to count the elements of the tuples:")
     elements = defaultdict(int)
+    roll_ctr = 0
     for (a, b) in odds:
         elements[a] += odds[(a, b)]
         elements[b] += odds[(a, b)]
+        roll_ctr += odds[(a, b)]
     for total in sorted(elements):
-        print("{}, {}".format(total, elements[total]))
+        print("{}, {}, {}".format(total, elements[total], perc(elements[total], args.iterations)))
 
     # Second method.
     print("\nThe odds of hitting each sum of two dice:")
-    odds = roll(args.iterations)
+    odds = roll_the_dice_2(args.iterations)
     for o in odds:
-        print("{:>2}, {}".format(o, odds[o]))
+        print("{:>2}, {}, {}".format(o, odds[o], perc(odds[o], args.iterations)))
 
     # Third method
     print("\nThis is theoretical and not empirical.")
@@ -107,7 +151,7 @@ Examples:
     print("The odds rolling four dice and getting at this sum:")
     rs = RollSet()
     for total in sorted(rs.possibilities):
-        print("{}, {}".format(total, rs.possibilities[total]))
+        print("{}, {}, {}".format(total, rs.possibilities[total], perc(rs.possibilities[total], rs.roll_combinations)))
 
 
 if __name__ == "__main__":

@@ -16,7 +16,9 @@ import logging
 import sys
 
 from collections import defaultdict
-from random import randint, shuffle
+from random import shuffle
+
+from cantstop.odds import Die
 
 
 class Settings(object):
@@ -40,7 +42,7 @@ class Game(object):
 
     def roll_dice(self):
         for d in self.dice:
-            d.roll()
+            d.roll_the_dice_2()
 
     def get_roll_choices(self):
         """
@@ -123,10 +125,12 @@ class Game(object):
 
             for p in self.players:
                 print("{}'s turn:".format(p.name))
+                attempt_counter = 0
 
                 is_busted = False
                 do_play = True
                 while not is_busted and do_play:
+                    attempt_counter += 1
                     self.roll_dice()
                     roll_choices = self.get_roll_choices()
 
@@ -446,6 +450,7 @@ class Player(object):
         - will stop if temp_progress wins the game even if there are extra markers
         - score the temp_progress gains against the possible chance of busting out
         - deprioritize columns almost won by opponent
+        - score opponents to decide how aggressive to play
     """
     index = 0  # To make the generic name unique.
 
@@ -584,18 +589,6 @@ class TripleValueOdds(object):
                             continue
 
         return hits/possibilities
-
-
-class Die(object):
-    """
-    This might be overkill.
-    """
-    def __init__(self):
-        self.value = None
-        self.roll()
-
-    def roll(self):
-        self.value = randint(1, 6)
 
 
 class SingleValueOdds(object):
