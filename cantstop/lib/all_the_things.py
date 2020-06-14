@@ -18,7 +18,7 @@ import sys
 from collections import defaultdict
 from random import shuffle
 
-from cantstop.odds import Die
+from cantstop.lib.odds import Die
 
 
 class Settings(object):
@@ -42,7 +42,7 @@ class Game(object):
 
     def roll_dice(self):
         for d in self.dice:
-            d.roll_the_dice_2()
+            d.roll()
 
     def get_roll_choices(self):
         """
@@ -550,45 +550,6 @@ class HumanPlayer(Player):
             break
 
         return user_input
-
-
-class TripleValueOdds(object):
-    """
-    Start with two sums, what are the odds of rolling a match with a given third sum?
-    """
-    def __init__(self, sum1, sum2):
-        self.sums = [sum1, sum2]
-
-    def find_odds(self, sum3):
-        three_sums = [self.sums[0], self.sums[1], sum3]
-
-        possibilities = 0
-        hits = 0
-        for d1 in range(1, 7):
-            for d2 in range(1, 7):
-                for d3 in range(1, 7):
-                    for d4 in range(1, 7):
-                        possibilities += 1
-                        if d1 + d2 in three_sums:
-                            hits += 1
-                            continue
-                        if d1 + d3 in three_sums:
-                            hits += 1
-                            continue
-                        if d1 + d4 in three_sums:
-                            hits += 1
-                            continue
-                        if d2 + d3 in three_sums:
-                            hits += 1
-                            continue
-                        if d2 + d4 in three_sums:
-                            hits += 1
-                            continue
-                        if d3 + d4 in three_sums:
-                            hits += 1
-                            continue
-
-        return hits/possibilities
 
 
 class SingleValueOdds(object):

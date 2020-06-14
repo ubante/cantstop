@@ -1,6 +1,6 @@
 import logging
 
-from cantstop.all_the_things import Player
+from cantstop.lib.all_the_things import Player
 
 
 class NamedPlayer(Player):

@@ -6,7 +6,7 @@ A: Same as with two dice times four.
 """
 import argparse
 
-from cantstop.all_the_things import SingleValueOdds
+from cantstop.lib.all_the_things import SingleValueOdds
 
 
 def main():

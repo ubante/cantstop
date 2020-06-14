@@ -8,8 +8,8 @@ import logging
 import sys
 from collections import defaultdict
 
-from cantstop.all_the_things import Game
-from cantstop.bots import QuadRollerBot, HexRollerBot, OctoRollerBot, SeptaRollerBot, DecaRollerBot
+from cantstop.lib.all_the_things import Game
+from cantstop.lib.bots import HexRollerBot, DecaRollerBot
 
 
 def set_logger(verbose_level):

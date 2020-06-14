@@ -7,8 +7,8 @@ import argparse
 import logging
 import sys
 
-from cantstop.all_the_things import HumanPlayer, Game
-from cantstop.bots import CowardBot, SmartCowardBot, ConservativeBot, SmartConservativeBot, QuadRollerBot
+from cantstop.lib.all_the_things import HumanPlayer, Game
+from cantstop.lib.bots import SmartCowardBot, ConservativeBot, SmartConservativeBot, QuadRollerBot
 
 
 def add_players():

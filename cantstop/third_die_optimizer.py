@@ -6,7 +6,7 @@ A: It's non-linear.  Best use a chart.
 """
 import argparse
 
-from cantstop.all_the_things import TripleValueOdds
+from cantstop.lib.odds import TripleValueOdds
 
 
 def main():
