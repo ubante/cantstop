@@ -39,11 +39,13 @@ class Dice(object):
         self.count = 4
         for i in range(0, self.count):
             self._dice.append(Die())
+        self.values = []
         self.roll()
 
     def roll(self):
         for d in self._dice:
             d.roll()
+            self.values.append(d.value)
 
 
 class Triplet(object):
@@ -61,7 +63,6 @@ class Triplet(object):
         if c not in [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:  # lol
             raise ValueError("'c' value of '{}' is not zero and not in [2, 12]".format(c))
 
-        # TODO validate that given values are in [0]+range(2, 13).
         # TODO order the inputs.
         self.values = [a, b, c]
         self.rs = RollSet()
@@ -81,13 +82,24 @@ class Triplet(object):
             else:
                 return 1.0
 
-        # To simplify the math, compute the odds of not hitting.
-        odds1 = 1 - (self.rs.possibilities[self.values[0]] / self.rs.roll_combinations_length)
-        odds2 = 1 - (self.rs.possibilities[self.values[1]] / self.rs.roll_combinations_length)
-        odds3 = 1 - (self.rs.possibilities[self.values[2]] / self.rs.roll_combinations_length)
-        logging.debug("{} odds to hit by each of the three column values")
-        logging.debug("{} {} {}".format(odds1, odds2, odds3))
-        odds = 1 - (odds1 * odds2 * odds3)
+        individual_odds = []
+        for value in self.values:
+            odd = 1 - (self.rs.possibilities[value] / self.rs.roll_combinations_length)
+            individual_odds.append(odd)
+        logging.debug("Individual odds:")
+        logging.debug(individual_odds)
+        not_hitting_odds = 1
+        for io in individual_odds:
+            not_hitting_odds *= io
+        odds = 1 - not_hitting_odds
+
+        # # To simplify the math, compute the odds of not hitting.
+        # odds1 = 1 - (self.rs.possibilities[self.values[0]] / self.rs.roll_combinations_length)
+        # odds2 = 1 - (self.rs.possibilities[self.values[1]] / self.rs.roll_combinations_length)
+        # odds3 = 1 - (self.rs.possibilities[self.values[2]] / self.rs.roll_combinations_length)
+        # logging.debug("{} odds to hit by each of the three column values")
+        # logging.debug("{} {} {}".format(odds1, odds2, odds3))
+        # odds = 1 - (odds1 * odds2 * odds3)
 
         if percent_format:
             return "{:3.1f}%".format(100*odds)
@@ -105,6 +117,7 @@ class RollSet(object):
         self.possibilities_ctr = 0
         self.roll_combinations = []  # List of unsorted tuples.
         self.roll_combinations_length = 6 * 6 * 6 * 6
+        self.roll_sorted_combinations = []
         for a in range(1, 7):
             for b in range(1, 7):
                 for c in range(1, 7):
@@ -120,6 +133,12 @@ class RollSet(object):
                         for t in total:
                             self.possibilities[t] += 1
                             self.possibilities_ctr += 1
+
+        for a in range(1, 7):
+            for b in range(a, 7):
+                for c in range(b, 7):
+                    for d in range(c, 7):
+                        self.roll_sorted_combinations.append((a, b, c, d))
 
 
 def roll_the_dice(iterations):

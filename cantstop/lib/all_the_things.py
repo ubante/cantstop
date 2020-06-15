@@ -173,6 +173,7 @@ class Column(object):
     """
     def __init__(self, nums, column_number):
         """
+        Now that column_number is passed, I should reconsider if we need nums.
 
         :param nums: The number of ranks in this column.
         :param column_number: The die roll that corresponds to this column, eg
