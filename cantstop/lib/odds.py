@@ -6,9 +6,12 @@ Collection of stat functions.
 Answer questions like:
 - Given two sums, which third sum maximizes a hit in the following attempt.
 - Given a temp_progress position, should player stop or continue.
+
+This should not import any other module in /lib.
 """
 
 import argparse
+import logging
 from collections import defaultdict
 from random import randint
 
@@ -17,6 +20,7 @@ class Die(object):
     """
     This might be overkill.
     """
+
     def __init__(self):
         self.value = None
         self.roll()
@@ -29,6 +33,7 @@ class Dice(object):
     """
     A set of dice.
     """
+
     def __init__(self):
         self._dice = []
         self.count = 4
@@ -41,28 +46,80 @@ class Dice(object):
             d.roll()
 
 
+class Triplet(object):
+    """
+    This represents the three columns of temporary progress.
+
+    Not sure about this.
+    """
+
+    def __init__(self, a=0, b=0, c=0):
+        if a not in [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:  # lol
+            raise ValueError("'a' value of '{}' is not zero and not in [2, 12]".format(a))
+        if b not in [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:  # lol
+            raise ValueError("'b' value of '{}' is not zero and not in [2, 12]".format(b))
+        if c not in [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:  # lol
+            raise ValueError("'c' value of '{}' is not zero and not in [2, 12]".format(c))
+
+        # TODO validate that given values are in [0]+range(2, 13).
+        # TODO order the inputs.
+        self.values = [a, b, c]
+        self.rs = RollSet()
+
+    def __repr__(self):
+        return "TRIP[{}|{}|{}]".format(self.values[0], self.values[1], self.values[2])
+
+    def compute_hit(self, percent_format=False):
+        """
+        Find the odds of the next attempt producing a hit.
+        :return: 1.0 is 100%
+        """
+        # This method only makes sense if all three markers are spent.
+        if not self.values[0] * self.values[1] * self.values[2]:
+            if percent_format:
+                return "100%"
+            else:
+                return 1.0
+
+        # To simplify the math, compute the odds of not hitting.
+        odds1 = 1 - (self.rs.possibilities[self.values[0]] / self.rs.roll_combinations_length)
+        odds2 = 1 - (self.rs.possibilities[self.values[1]] / self.rs.roll_combinations_length)
+        odds3 = 1 - (self.rs.possibilities[self.values[2]] / self.rs.roll_combinations_length)
+        logging.debug("{} odds to hit by each of the three column values")
+        logging.debug("{} {} {}".format(odds1, odds2, odds3))
+        odds = 1 - (odds1 * odds2 * odds3)
+
+        if percent_format:
+            return "{:3.1f}%".format(100*odds)
+        else:
+            return odds
+
+
 class RollSet(object):
     """
     All the possible ways to sum four dice.
     """
+
     def __init__(self):
         self.possibilities = defaultdict(int)
-        self.poss_ctr = 0
-        self.roll_combinations = 6*6*6*6
+        self.possibilities_ctr = 0
+        self.roll_combinations = []  # List of unsorted tuples.
+        self.roll_combinations_length = 6 * 6 * 6 * 6
         for a in range(1, 7):
             for b in range(1, 7):
                 for c in range(1, 7):
                     for d in range(1, 7):
+                        self.roll_combinations.append((a, b, c, d))
                         total = defaultdict(int)
-                        total[a+b] = 1
-                        total[a+c] = 1
-                        total[a+d] = 1
-                        total[b+c] = 1
-                        total[b+d] = 1
-                        total[c+d] = 1
+                        total[a + b] = 1
+                        total[a + c] = 1
+                        total[a + d] = 1
+                        total[b + c] = 1
+                        total[b + d] = 1
+                        total[c + d] = 1
                         for t in total:
                             self.possibilities[t] += 1
-                            self.poss_ctr += 1
+                            self.possibilities_ctr += 1
 
 
 def roll_the_dice(iterations):
@@ -95,18 +152,18 @@ def roll_the_dice_2(iterations):
         for d in dice:
             d.roll()
 
-        odds[dice[0].value+dice[1].value] += 1
-        odds[dice[0].value+dice[2].value] += 1
-        odds[dice[0].value+dice[3].value] += 1
-        odds[dice[1].value+dice[2].value] += 1
-        odds[dice[1].value+dice[3].value] += 1
-        odds[dice[2].value+dice[3].value] += 1
+        odds[dice[0].value + dice[1].value] += 1
+        odds[dice[0].value + dice[2].value] += 1
+        odds[dice[0].value + dice[3].value] += 1
+        odds[dice[1].value + dice[2].value] += 1
+        odds[dice[1].value + dice[3].value] += 1
+        odds[dice[2].value + dice[3].value] += 1
 
     return odds
 
 
 def perc(numerator, denominator):
-    fraction = numerator/denominator*100
+    fraction = numerator / denominator * 100
     return "{:3.1f}%".format(fraction)
 
 
@@ -114,6 +171,7 @@ class TripleValueOdds(object):
     """
     Start with two sums, what are the odds of rolling a match with a given third sum?
     """
+
     def __init__(self, sum1, sum2):
         self.sums = [sum1, sum2]
 
@@ -146,7 +204,7 @@ class TripleValueOdds(object):
                             hits += 1
                             continue
 
-        return hits/possibilities
+        return hits / possibilities
 
 
 def main():
@@ -190,7 +248,8 @@ Examples:
     print("The odds rolling four dice and getting at this sum:")
     rs = RollSet()
     for total in sorted(rs.possibilities):
-        print("{}, {}, {}".format(total, rs.possibilities[total], perc(rs.possibilities[total], rs.roll_combinations)))
+        print("{}, {}, {}".format(total, rs.possibilities[total],
+                                  perc(rs.possibilities[total], rs.roll_combinations_length)))
 
 
 if __name__ == "__main__":

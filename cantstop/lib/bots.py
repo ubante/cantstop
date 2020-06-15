@@ -83,10 +83,23 @@ class ConservativeBot(NamedPlayer):
         return 1
 
 
-class SmartConservativeBot(ConservativeBot):
+class ScoringBot(NamedPlayer):
     """
-    This bot will....
+    This bot will:
+    - score the temp_progress gains against the possible chance of busting out
     """
+    def __init__(self, name):
+        super().__init__(name)
+        self.state = None  # This may need to go to Player()
+
+    def score_columns(self, col_list):
+        pass
+
+    def choose_columns(self, state):
+        self.state = state
+
+    def stop_or_continue(self, state):
+        self.state = state
 
 
 class RollerBot(NamedPlayer):
@@ -155,3 +168,7 @@ class OctoRollerBot(RollerBot):
 class DecaRollerBot(RollerBot):
     def __init__(self, name):
         super().__init__(name, 10)
+
+
+
+

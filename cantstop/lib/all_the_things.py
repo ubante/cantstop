@@ -448,7 +448,6 @@ class Player(object):
         - put the first marker close to the middle
         - put the last marker close to the sides
         - will stop if temp_progress wins the game even if there are extra markers
-        - score the temp_progress gains against the possible chance of busting out
         - deprioritize columns almost won by opponent
         - score opponents to decide how aggressive to play
     """

@@ -8,7 +8,7 @@ import logging
 import sys
 
 from cantstop.lib.all_the_things import HumanPlayer, Game
-from cantstop.lib.bots import SmartCowardBot, ConservativeBot, SmartConservativeBot, QuadRollerBot
+from cantstop.lib.bots import SmartCowardBot, ConservativeBot, QuadRollerBot
 
 
 def add_players():
@@ -33,7 +33,6 @@ Examples:
     game = Game()
     game.add_player(SmartCowardBot("Dog"))
     game.add_player(ConservativeBot("Emu"))
-    game.add_player(SmartConservativeBot("Fox"))
     game.add_player(QuadRollerBot("Goat"))
     game.run()
 
