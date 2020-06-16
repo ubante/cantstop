@@ -39,18 +39,5 @@ Examples:
     game.print_status()
 
 
-def test():
-    game = Game()
-    you = HumanPlayer("Me")
-    game.add_player(you)
-
-    game.roll_dice()
-    print("Dice rolls: {}".format(game.get_dice_values()))
-    print("Pairs:      {}".format(game.get_roll_values()))
-    print()
-    game.print_status()
-
-
 if __name__ == "__main__":
     main()
-    # test()

@@ -18,7 +18,7 @@ import sys
 from collections import defaultdict
 from random import shuffle
 
-from cantstop.lib.odds import Die
+from cantstop.lib.odds import Die, Dice
 
 
 class Settings(object):
@@ -32,17 +32,8 @@ class Game(object):
         self.players = []
         self.round_ctr = 0
         self.game_won = False
-        self.dice = []
+        self.dice = Dice()
         self.winner = None
-        self.initialize()
-
-    def initialize(self):
-        for i in range(1, 5):
-            self.dice.append(Die())
-
-    def roll_dice(self):
-        for d in self.dice:
-            d.roll()
 
     def get_roll_choices(self):
         """
@@ -52,7 +43,7 @@ class Game(object):
         :return:
         """
         free_columns = self.board.get_incomplete_columns()
-        roll_values = self.get_roll_values()
+        roll_values = self.dice.get_sums()
         temp_columns = self.board.temporary_progress.keys()
 
         logging.debug("Available: {}".format(free_columns))
@@ -88,22 +79,6 @@ class Game(object):
         logging.debug("Choices:   {}".format(choices))
         return choices
 
-    def get_dice_values(self):
-        return [die.value for die in self.dice]
-
-    def get_roll_values(self):
-        pair_of_sums1 = tuple(sorted([self.dice[0].value + self.dice[1].value,
-                                      self.dice[2].value + self.dice[3].value]))
-        pair_of_sums2 = tuple(sorted([self.dice[0].value + self.dice[2].value,
-                                      self.dice[1].value + self.dice[3].value]))
-        pair_of_sums3 = tuple(sorted([self.dice[0].value + self.dice[3].value,
-                                      self.dice[1].value + self.dice[2].value]))
-
-        # It's possible that there are duplicate tuples.  For example,
-        # the dice rolls are 1, 2, 2, 5].  This results in these possible
-        # pairs: [(3, 7), (4, 6), (3, 7)].  So unique the list.
-        return list({pair_of_sums1, pair_of_sums2, pair_of_sums3})
-
     def add_player(self, p):
         self.players.append(p)
         self.board.add_player(p)
@@ -131,7 +106,7 @@ class Game(object):
                 do_play = True
                 while not is_busted and do_play:
                     attempt_counter += 1
-                    self.roll_dice()
+                    self.dice.roll()
                     roll_choices = self.get_roll_choices()
 
                     if not roll_choices:
@@ -139,8 +114,8 @@ class Game(object):
                         The player rolled once to many times.
                         """
                         self.board.reset_progress()
-                        logging.debug("Dice roll: {}".format(self.get_dice_values()))
-                        logging.debug("Roll values: {}".format(self.get_roll_values()))
+                        logging.debug("Dice roll: {}".format(self.dice.values))
+                        logging.debug("Roll values: {}".format(self.dice.get_sums()))
                         p.bust_out()
                         is_busted = True
                         continue
@@ -159,7 +134,7 @@ class Game(object):
                         if winner:
                             self.game_won = True
                             self.winner = winner
-                            return
+                            return  # TODO Is this needed?
 
 
 class Column(object):
@@ -192,7 +167,8 @@ class Column(object):
         # If this column is completed by a player, then that player
         # is marked the owner.  All other players are removed.
         self.winner = name
-        print("------- {} has won column {} -------".format(name, self.column_number))
+        if logging.root.level <= logging.INFO:
+            print("------- {} has won column {} -------".format(name, self.column_number))
 
         # Remove other players
         self.initialize_positions()
@@ -378,7 +354,7 @@ class Board(object):
     def register_roll_choice(self, choice, name=None):
         if not name:
             name = "Player"
-        print("{} chose: {}".format(name, choice))
+        logging.debug("{} chose: {}".format(name, choice))
         for column in choice:
             if column in self.temporary_progress:
                 # We can assume that if a column is temporarily maxed,
@@ -391,11 +367,19 @@ class Board(object):
 
     def register_stop_choice(self, player):
         # Commit the temporary progress.
-        print("Player chose to stop")
+        logging.debug("Player chose to stop")
         for pos in self.temporary_progress:
             self.columns[pos].advance(player.name, self.temporary_progress[pos])
 
         self.reset_progress()
+
+    def get_won_columns(self):
+        won = []
+        for col in self.columns:
+            if self.columns[col].winner:
+                won.append(col)
+
+        return won
 
     def check_for_winner(self):
         col_winners = defaultdict(int)

@@ -43,9 +43,29 @@ class Dice(object):
         self.roll()
 
     def roll(self):
+        self.values = []
         for d in self._dice:
             d.roll()
             self.values.append(d.value)
+
+    def get_sums(self):
+        """
+        This returns three tuples where each value has the sum of two distinct
+        pairs of dice.
+
+        :return: eg [(5, 10), (6, 9), (7, 8)]
+        """
+        pair_of_sums1 = tuple(sorted([self._dice[0].value + self._dice[1].value,
+                                      self._dice[2].value + self._dice[3].value]))
+        pair_of_sums2 = tuple(sorted([self._dice[0].value + self._dice[2].value,
+                                      self._dice[1].value + self._dice[3].value]))
+        pair_of_sums3 = tuple(sorted([self._dice[0].value + self._dice[3].value,
+                                      self._dice[1].value + self._dice[2].value]))
+
+        # It's possible that there are duplicate tuples.  For example,
+        # the dice rolls are 1, 2, 2, 5].  This results in these possible
+        # pairs: [(3, 7), (4, 6), (3, 7)].  So unique the list.
+        return list({pair_of_sums1, pair_of_sums2, pair_of_sums3})
 
 
 class Triplet(object):
@@ -141,6 +161,65 @@ class RollSet(object):
                         self.roll_sorted_combinations.append((a, b, c, d))
 
 
+class ScoreRule28(object):
+    """
+    This is a heuristic described in https://www.aaai.org/ocs/index.php/FLAIRS/2009/paper/download/123/338
+    """
+    def score(self, columns):
+        """
+        Accept a dict of column ranks and sum the score of each column.  See link.
+
+        :param columns: dict of column_number->rank_achieved
+        :return: int
+        """
+        score = 0
+        for c in columns:
+            multiplier = abs(7-c) + 1
+            score += multiplier * columns[c]
+
+        return score
+
+
+class TripleValueOdds(object):
+    """
+    Start with two sums, what are the odds of rolling a match with a given third sum?
+    """
+
+    def __init__(self, sum1, sum2):
+        self.sums = [sum1, sum2]
+
+    def find_odds(self, sum3):
+        three_sums = [self.sums[0], self.sums[1], sum3]
+
+        possibilities = 0
+        hits = 0
+        for d1 in range(1, 7):
+            for d2 in range(1, 7):
+                for d3 in range(1, 7):
+                    for d4 in range(1, 7):
+                        possibilities += 1
+                        if d1 + d2 in three_sums:
+                            hits += 1
+                            continue
+                        if d1 + d3 in three_sums:
+                            hits += 1
+                            continue
+                        if d1 + d4 in three_sums:
+                            hits += 1
+                            continue
+                        if d2 + d3 in three_sums:
+                            hits += 1
+                            continue
+                        if d2 + d4 in three_sums:
+                            hits += 1
+                            continue
+                        if d3 + d4 in three_sums:
+                            hits += 1
+                            continue
+
+        return hits / possibilities
+
+
 def roll_the_dice(iterations):
     odds = {}
     dice = [Die(), Die(), Die(), Die()]
@@ -186,44 +265,17 @@ def perc(numerator, denominator):
     return "{:3.1f}%".format(fraction)
 
 
-class TripleValueOdds(object):
+def get_column_triplets():
     """
-    Start with two sums, what are the odds of rolling a match with a given third sum?
+    This returns the different combinations of three distinct columns.
+    :return:
     """
-
-    def __init__(self, sum1, sum2):
-        self.sums = [sum1, sum2]
-
-    def find_odds(self, sum3):
-        three_sums = [self.sums[0], self.sums[1], sum3]
-
-        possibilities = 0
-        hits = 0
-        for d1 in range(1, 7):
-            for d2 in range(1, 7):
-                for d3 in range(1, 7):
-                    for d4 in range(1, 7):
-                        possibilities += 1
-                        if d1 + d2 in three_sums:
-                            hits += 1
-                            continue
-                        if d1 + d3 in three_sums:
-                            hits += 1
-                            continue
-                        if d1 + d4 in three_sums:
-                            hits += 1
-                            continue
-                        if d2 + d3 in three_sums:
-                            hits += 1
-                            continue
-                        if d2 + d4 in three_sums:
-                            hits += 1
-                            continue
-                        if d3 + d4 in three_sums:
-                            hits += 1
-                            continue
-
-        return hits / possibilities
+    triplets = []
+    for a in range(2, 13):
+        for b in range(a+1, 13):
+            for c in range(b+1, 13):
+                triplets.append((a, b, c))
+    return triplets
 
 
 def main():
