@@ -35,7 +35,7 @@ class Game(object):
         self.dice = Dice()
         self.winner = None
 
-    def get_roll_choices(self):
+    def get_roll_choices(self, player):
         """
         Check the board to see which of the rolls are possible choices.  It is
         possible that there are no choices.
@@ -46,6 +46,14 @@ class Game(object):
         roll_values = self.dice.get_sums()
         temp_columns = self.board.temporary_progress.keys()
 
+        # Check that the progress in the temp_columns don't exceed the
+        # available space in the free columns.
+        for col in temp_columns:
+            locked_position = self.board.columns[col].get_position(player.name)
+            temp_position = self.board.temporary_progress[col]
+            if locked_position + temp_position >= self.board.columns[col].intervals:
+                free_columns.remove(col)
+
         logging.debug("Available: {}".format(free_columns))
         logging.debug("Rolls:     {}".format(roll_values))
 
@@ -53,8 +61,6 @@ class Game(object):
         # a new column or two new columns.  Otherwise, their rolls
         # have to overlap the columns they have already chosen on this
         # turn.  Or they bust out.
-        # TODO this is allowing user to choose a column that is full
-        #   confirmed that a temp_progress column that is full cannot be can option
         choices = []
         if self.board.free_markers >= 2:
             for input_tuple in roll_values:
@@ -107,7 +113,7 @@ class Game(object):
                 while not is_busted and do_play:
                     attempt_counter += 1
                     self.dice.roll()
-                    roll_choices = self.get_roll_choices()
+                    roll_choices = self.get_roll_choices(p)
 
                     if not roll_choices:
                         """
@@ -424,6 +430,13 @@ class State(object):
         logging.debug("Chosen_cols = {}".format(chosen_cols))
 
         return chosen_cols
+
+    @staticmethod
+    def weight_column(col):
+        if col <= 7:
+            return 8 - col
+        else:
+            return col - 6
 
     def rule28(self):
         """

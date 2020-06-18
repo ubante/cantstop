@@ -1,6 +1,6 @@
 import logging
 
-from cantstop.lib.all_the_things import Player
+from cantstop.lib.all_the_things import Player, State
 
 
 class Bot(Player):
@@ -10,6 +10,22 @@ class Bot(Player):
     def __init__(self, name):
         super().__init__()
         self.name = name
+
+    def choose_columns(self, state):
+        """
+        Just the most basic logic.
+        :param state:
+        :return:
+        """
+        return state.choices[0]
+
+    def stop_or_continue(self, state):
+        """
+        Just the most basic logic.
+        :param state:
+        :return:
+        """
+        return 1
 
     def choose_already_selected_columns(self, state):
         """
@@ -37,15 +53,11 @@ class Bot(Player):
 
 class CowardBot(Bot):
     """
-    This bot will always choose the first combination and then stop.
+    This bot will use the default behavior of choosing the first combination and
+    then stop.
 
     Head to head against SCB, this class wins 1 out of 10 matches.
     """
-    def choose_columns(self, state):
-        return state.choices[0]
-
-    def stop_or_continue(self, state):
-        return 1
 
 
 class SmartCowardBot(CowardBot):
@@ -111,7 +123,7 @@ class ScoringBot(Bot):
     This bot will:
     - naively score the temp_progress
 
-    Results: SB is the best #2
+    Results: SB is the best (#2)
     -----:::::===== Final Score =====:::::-----
     After 10000 iterations, here are the winners:
     defaultdict(<class 'int'>, {'HexRollerBot': 4497, 'ScoringBot': 5503})
@@ -130,13 +142,40 @@ class ScoringBot(Bot):
         return 1  # Stop
 
 
+class ChoosingScoringBot(ScoringBot):
+    """
+    This bot will:
+    - score the possible choices using the logic in
+      https://www.aaai.org/ocs/index.php/FLAIRS/2009/paper/download/123/338
+
+    We have a new champion (#3)
+-----:::::===== Final Score =====:::::-----
+After 10000 iterations, here are the winners:
+defaultdict(<class 'int'>, {'ChoosingScoringBot': 6655, 'ScoringBot': 3345})
+    """
+    def choose_columns(self, state):
+        chosen_cols = state.get_current_columns(self.name)
+
+        scores = {}
+        for i, choice_tup in enumerate(state.choices):
+            score = 0
+            for choice in choice_tup:
+                # Lose points if this requires a new marker.
+                if choice not in chosen_cols:
+                    score -= 6
+                score += State.weight_column(choice)
+            scores[i] = score
+        best_choice_index = max(scores, key=scores.get)
+        return state.choices[best_choice_index]
+
+
 class RollerBot(Bot):
     """
     This bot will:
         - choose columns it has already chosen
         - roll X times
 
-    Results: HexRB is the best #1
+    Results: HexRB is the best (#1)
 After 10000 iterations, here are the winners:
 defaultdict(<class 'int'>, {'QuadRollerBot': 2311, 'OctoRollerBot': 2657, 'DecaRollerBot': 2079, 'HexRollerBot': 2953})
 

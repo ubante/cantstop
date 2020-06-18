@@ -83,8 +83,7 @@ class Triplet(object):
         if c not in [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:  # lol
             raise ValueError("'c' value of '{}' is not zero and not in [2, 12]".format(c))
 
-        # TODO order the inputs.
-        self.values = [a, b, c]
+        self.values = sorted[a, b, c]
         self.rs = RollSet()
 
     def __repr__(self):
