@@ -134,7 +134,9 @@ class Game(object):
                         if winner:
                             self.game_won = True
                             self.winner = winner
-                            return  # TODO Is this needed?
+
+                            # Once there is a winner, return to main.
+                            return
 
 
 class Column(object):
@@ -183,7 +185,7 @@ class Column(object):
     def add_player(self, name):
         """
         Since players start at the bottom of the column, that's where
-        we'll put them.
+        we'll put them.st
         :return:
         """
         self.positions[0].append(name)
@@ -401,7 +403,7 @@ class State(object):
     """
     def __init__(self, choices, board_status, turn):
         self.choices = choices
-        self.player_positions, self.temp_progress = board_status
+        self.player_positions, self.temp_progress = board_status  # Weird to use a tuple here.
         self.turn = turn
 
     def display(self):
@@ -422,6 +424,37 @@ class State(object):
         logging.debug("Chosen_cols = {}".format(chosen_cols))
 
         return chosen_cols
+
+    def rule28(self):
+        """
+        From https://www.aaai.org/ocs/index.php/FLAIRS/2009/paper/download/123/338
+
+        This method will naively weigh all ranks equally, whether it is the first
+        or last.  Also disregard the number of free markers.
+        :return:
+        """
+        score_by_col = {}
+        for col in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
+            if col <= 7:
+                score_by_col[col] = 8 - col
+            else:
+                score_by_col[col] = col - 6
+
+        score28 = 0
+        product = 1
+        for col in self.temp_progress:
+            score28 += score_by_col[col] * (self.temp_progress[col] + 1)
+            product *= col
+
+        # Check for oddness.
+        if (product % 2) == 1:
+            score28 += 2
+
+        # Check for evenness.
+        if (product % 8) == 0:
+            score28 -= 2
+
+        return score28
 
 
 class Player(object):
@@ -461,29 +494,6 @@ class Player(object):
     def bust_out(self):
         print("Player {} has busted out.".format(self.name))
 
-    def choose_already_selected_columns(self, state):
-        """
-        This will prioritize choosing a column if it has already
-        been chosen in the past.  If there's a choice to advance
-        two ranks in a column, then that choise will be taken.
-
-        :param state:
-        :return:
-        """
-        if logging.root.level <= logging.DEBUG:
-            state.display()
-
-        chosen_cols = state.get_current_columns(self.name)
-        overlap = {}
-        for i, choice_tup in enumerate(state.choices):
-            match_ctr = 0
-            for choice in choice_tup:
-                if choice in chosen_cols:
-                    match_ctr += 1
-            overlap[i] = match_ctr
-        best_choice_index = max(overlap, key=overlap.get)
-        return state.choices[best_choice_index]
-
 
 class HumanPlayer(Player):
     def __init__(self, name):
@@ -513,6 +523,8 @@ class HumanPlayer(Player):
         return state.choices[user_input-1]
 
     def stop_or_continue(self, state):
+        print("TempProgress: {}".format(state.temp_progress))
+        print("Current Rule28 score: {}".format(state.rule28()))
         print("1: Stop\n2: Continue")
         user_input = input("Enter: ")
         return int(user_input)

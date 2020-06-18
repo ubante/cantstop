@@ -31,7 +31,8 @@ Examples:
     logging.debug("Starting up....")
 
     game = Game()
-    game.add_player(SmartCowardBot("Dog"))
+    # game.add_player(SmartCowardBot("Dog"))
+    game.add_player(HumanPlayer("Cond"))
     game.add_player(ConservativeBot("Emu"))
     game.add_player(QuadRollerBot("Goat"))
     game.run()

@@ -3,7 +3,7 @@ import logging
 from cantstop.lib.all_the_things import Player
 
 
-class NamedPlayer(Player):
+class Bot(Player):
     """
     Getting spicey.
     """
@@ -11,8 +11,31 @@ class NamedPlayer(Player):
         super().__init__()
         self.name = name
 
+    def choose_already_selected_columns(self, state):
+        """
+        This will prioritize choosing a column if it has already
+        been chosen in the past.  If there's a choice to advance
+        two ranks in a column, then that choise will be taken.
 
-class CowardBot(NamedPlayer):
+        :param state:
+        :return:
+        """
+        if logging.root.level <= logging.DEBUG:
+            state.display()
+
+        chosen_cols = state.get_current_columns(self.name)
+        overlap = {}
+        for i, choice_tup in enumerate(state.choices):
+            match_ctr = 0
+            for choice in choice_tup:
+                if choice in chosen_cols:
+                    match_ctr += 1
+            overlap[i] = match_ctr
+        best_choice_index = max(overlap, key=overlap.get)
+        return state.choices[best_choice_index]
+
+
+class CowardBot(Bot):
     """
     This bot will always choose the first combination and then stop.
 
@@ -51,7 +74,7 @@ class SmartCowardBot(CowardBot):
         return state.choices[best_choice_index]
 
 
-class ConservativeBot(NamedPlayer):
+class ConservativeBot(Bot):
     """
     This bot will:
     - stop when there are no free markers
@@ -83,34 +106,42 @@ class ConservativeBot(NamedPlayer):
         return 1
 
 
-class ScoringBot(NamedPlayer):
+class ScoringBot(Bot):
     """
     This bot will:
-    - score the temp_progress gains against the possible chance of busting out
+    - naively score the temp_progress
+
+    Results: SB is the best #2
+    -----:::::===== Final Score =====:::::-----
+    After 10000 iterations, here are the winners:
+    defaultdict(<class 'int'>, {'HexRollerBot': 4497, 'ScoringBot': 5503})
     """
     def __init__(self, name):
         super().__init__(name)
         self.state = None  # This may need to go to Player()
 
-    def score_columns(self, col_list):
-        pass
-
     def choose_columns(self, state):
-        self.state = state
+        return self.choose_already_selected_columns(state)
 
     def stop_or_continue(self, state):
-        self.state = state
+        if state.rule28() < 28:
+            return 2  # Play
+
+        return 1  # Stop
 
 
-class RollerBot(NamedPlayer):
+class RollerBot(Bot):
     """
     This bot will:
         - choose columns it has already chosen
         - roll X times
 
-    Results: HexRB is the best.
+    Results: HexRB is the best #1
 After 10000 iterations, here are the winners:
 defaultdict(<class 'int'>, {'QuadRollerBot': 2311, 'OctoRollerBot': 2657, 'DecaRollerBot': 2079, 'HexRollerBot': 2953})
+
+After 10000 iterations, here are the winners:
+defaultdict(<class 'int'>, {'DecaRollerBot': 3888, 'HexRollerBot': 6112})
 
     It's a valid argument to say that subclasses could be composed.  But I want
     the class name to be different in multi_sim.

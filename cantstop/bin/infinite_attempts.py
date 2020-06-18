@@ -56,7 +56,7 @@ Examples:
 '''
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("-i", "--iteration", help="How many times to run?",
-                        type=int, default=100000)
+                        type=int, default=10000)
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING,
                         stream=sys.stdout,
