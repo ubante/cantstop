@@ -18,7 +18,7 @@ import sys
 from collections import defaultdict
 from random import shuffle
 
-from cantstop.lib.odds import Die, Dice
+from cantstop.lib.odds import Dice, perc
 
 
 class Settings(object):
@@ -280,7 +280,6 @@ class Board(object):
         return player_positions
 
     def get_status(self):
-        # Alternatively, this could return self.columns.
         return self.get_player_positions(), self.temporary_progress
 
     def get_incomplete_columns(self):
@@ -292,9 +291,10 @@ class Board(object):
         return incomplete_columns
 
     @staticmethod
-    def get_status_string(positions):
+    def get_status_string(positions, percentage=False):
         """
         This is static so other classes can call this.
+        :param percentage:
         :param positions:
         :return:
         """
@@ -336,7 +336,12 @@ class Board(object):
                 # Use a period instead of a '0' to make the chart
                 # more readable.
                 if positions[player_name][column - 2]:
-                    status += "{:>5}".format(positions[player_name][column - 2])
+                    if percentage:
+                        numerator = positions[player_name][column - 2]
+                        denominator = Board.get_ranks_by_column(column)
+                        status += "{:>5}".format(perc(numerator, denominator, no_decimal=True))
+                    else:
+                        status += "{:>5}".format(positions[player_name][column - 2])
                     continue
 
                 status += "{:>5}".format('.')
@@ -344,7 +349,7 @@ class Board(object):
 
         return status
 
-    def print_status(self):
+    def print_status(self, percentage=False):
         """
         The board looks like this:
 
@@ -354,7 +359,7 @@ class Board(object):
 
         :return:
         """
-        print(Board.get_status_string(self.get_player_positions()))
+        print(Board.get_status_string(self.get_player_positions(), percentage=percentage))
 
     def bust_player(self):
         self.reset_progress()
@@ -412,8 +417,8 @@ class State(object):
         self.player_positions, self.temp_progress = board_status  # Weird to use a tuple here.
         self.turn = turn
 
-    def display(self):
-        print(Board.get_status_string(self.player_positions))
+    def display(self, percentage=False):
+        print(Board.get_status_string(self.player_positions, percentage=percentage))
 
     def print_choices(self):
         print("Turn #{}, your choices are:".format(self.turn))
@@ -460,7 +465,7 @@ class State(object):
             product *= col
 
         # Check for oddness.
-        if (product % 2) == 1:
+        if product > 1 and (product % 2) == 1:
             score28 += 2
 
         # Check for evenness.
@@ -513,9 +518,85 @@ class HumanPlayer(Player):
         super().__init__()
         self.name = name
 
+    def print_temp_progress(self, state):
+        existing_progress = state.player_positions[self.name]  # List
+        combined_progress = []
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            if column in state.temp_progress:
+                total = state.temp_progress[column] + existing_progress[column - 2]
+            else:
+                total = existing_progress[column - 2]
+            combined_progress.append(total)
+
+        # Header line
+        status = "{:>19}".format("Temp Progress")
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            status += "{:>5}".format(column)
+        status += "\n"
+        status += "{:>19}".format("")
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            if column < 10:
+                status += "{:>5}".format("-")
+            else:
+                status += "{:>5}".format("--")
+        status += "\n"
+
+        # Infer pipes
+        # TODO Not sure this is working
+        completed_columns = {}
+        player_completed_columns = defaultdict(int)
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            ranks = Board.get_ranks_by_column(column)
+            if existing_progress[column - 2] == ranks:
+                completed_columns[column] = self.name
+                player_completed_columns[self.name] += 1
+
+        # Print out two rows.  The first is the temp progress.
+        percentage = True  # Let's see which looks better.
+        status += "{:>19}".format("")
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            # Use pipes to mark completed columns won by another player.
+            if column in completed_columns and completed_columns[column] != self.name:
+                status += "{:>5}".format('||')
+                continue
+
+            # Use a period instead of a '0' to make the chart
+            # more readable.
+            if column in state.temp_progress:
+                status += "  +{:>2}".format(state.temp_progress[column])
+                continue
+
+            status += "{:>5}".format('.')
+        status += "\n"
+
+        # And the second is the combined.
+        status += "{:>19}".format("")
+        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            # Use pipes to mark completed columns won by another player.
+            if column in completed_columns and completed_columns[column] != self.name:
+                status += "{:>5}".format('||')
+                continue
+
+            # Use a period instead of a '0' to make the chart
+            # more readable.
+            if combined_progress[column - 2]:
+                if percentage:
+                    numerator = combined_progress[column - 2]
+                    denominator = Board.get_ranks_by_column(column)
+                    status += "{:>5}".format(perc(numerator, denominator, no_decimal=True))
+                else:
+                    status += "{:>5}".format(combined_progress[column - 2])
+                continue
+
+            status += "{:>5}".format('.')
+        status += "\n"
+        print(status)
+
     def choose_columns(self, state):
-        state.display()
+        state.display(percentage=True)
         logging.debug("TempProgress: {}".format(state.temp_progress))
+        self.print_temp_progress(state)
+        print("Current Rule28 score: {}".format(state.rule28()))
         print("{} free markers".format(3-len(state.temp_progress)))
         state.print_choices()
 
@@ -536,7 +617,7 @@ class HumanPlayer(Player):
         return state.choices[user_input-1]
 
     def stop_or_continue(self, state):
-        print("TempProgress: {}".format(state.temp_progress))
+        self.print_temp_progress(state)
         print("Current Rule28 score: {}".format(state.rule28()))
         print("1: Stop\n2: Continue")
         user_input = input("Enter: ")

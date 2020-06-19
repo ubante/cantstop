@@ -259,8 +259,10 @@ def roll_the_dice_2(iterations):
     return odds
 
 
-def perc(numerator, denominator):
+def perc(numerator, denominator, no_decimal=False):
     fraction = numerator / denominator * 100
+    if no_decimal:
+        return "{:3.0f}%".format(fraction)
     return "{:3.1f}%".format(fraction)
 
 

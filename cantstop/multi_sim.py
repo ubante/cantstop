@@ -43,7 +43,7 @@ Examples:
 '''
     parser = argparse.ArgumentParser(description=description,
                                      epilog=epilog)
-    parser.add_argument("-i", "--iteration", help="How many times to run?", default=10000, type=int)
+    parser.add_argument("-i", "--iteration", help="How many times to run?", default=1000, type=int)
     parser.add_argument("-v", "--verbose", help="Print info/debug", action="count", default=1)
     args = parser.parse_args()
     set_logger(args.verbose)
