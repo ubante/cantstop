@@ -8,7 +8,7 @@ import logging
 import sys
 
 from cantstop.lib.all_the_things import HumanPlayer, Game
-from cantstop.lib.bots import QuadRollerBot, ScoringBot
+from cantstop.lib.bots.bots import QuadRollerBot, ScoringBot
 
 
 def add_players():

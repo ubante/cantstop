@@ -17,7 +17,7 @@ import sys
 
 from cantstop.lib import odds
 from cantstop.lib.all_the_things import Game
-from cantstop.lib.bots import OctoRollerBot
+from cantstop.lib.bots.bots import OctoRollerBot
 
 
 class InfiniteGame(Game):

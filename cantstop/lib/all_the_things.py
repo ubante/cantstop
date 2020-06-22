@@ -250,6 +250,7 @@ class Board(object):
         # The columns on the extreme right and left has 3
         # positions.  The next column in, has 5 positions.  This
         # continues until the middle column has 13 positions.
+        # TODO this should be in Column()
         if column <= 7:
             num_positions = column * 2 - 1
         else:
@@ -438,6 +439,11 @@ class State(object):
 
     @staticmethod
     def weight_column(col):
+        """
+        This is part of the rule 28 scoring.
+        :param col:
+        :return:
+        """
         if col <= 7:
             return 8 - col
         else:
@@ -453,10 +459,7 @@ class State(object):
         """
         score_by_col = {}
         for col in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
-            if col <= 7:
-                score_by_col[col] = 8 - col
-            else:
-                score_by_col[col] = col - 6
+            score_by_col[col] = State.weight_column(col)
 
         score28 = 0
         product = 1
@@ -473,6 +476,51 @@ class State(object):
             score28 -= 2
 
         return score28
+
+    def p2(self, name):
+        """
+        This is a naive way to score the existing progress.  "p2" is percentage squared.
+        Each column's percentage progress is squared then summed to make this score
+        :return:
+        """
+        p2_score = 0
+        for i, rank in enumerate(self.player_positions[name]):
+            col_number = i + 2
+            player_rank_in_this_column = self.player_positions[name][i]
+            num_ranks_in_col = Board.get_ranks_by_column(col_number)
+            p = player_rank_in_this_column / num_ranks_in_col
+            p2 = p * p
+            p2_score += p2
+
+        return p2_score
+
+    def p2_temp_progress(self, name):
+        """
+        The incremental p2 score contributed by temp_progress only.
+
+        :return:
+        """
+        return self.p2_combined(name) - self.p2(name)
+
+    def p2_combined(self, name):
+        """
+        This includes the temporary progress in the P2 score
+        :param name:
+        :return:
+        """
+        p2_score = 0
+        for i, rank in enumerate(self.player_positions[name]):
+            col_number = i + 2
+            initial_rank_in_this_column = self.player_positions[name][i]
+            temp_rank_in_this_column = 0
+            if col_number in self.temp_progress:
+                temp_rank_in_this_column = self.temp_progress[col_number]
+            num_ranks_in_col = Board.get_ranks_by_column(col_number)
+            p = (initial_rank_in_this_column + temp_rank_in_this_column) / num_ranks_in_col
+            p2 = p * p
+            p2_score += p2
+
+        return p2_score
 
 
 class Player(object):
@@ -517,13 +565,14 @@ class HumanPlayer(Player):
     def __init__(self, name):
         super().__init__()
         self.name = name
+        self.state = None
 
-    def print_temp_progress(self, state):
-        existing_progress = state.player_positions[self.name]  # List
+    def print_temp_progress_table(self):
+        existing_progress = self.state.player_positions[self.name]  # List
         combined_progress = []
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
-            if column in state.temp_progress:
-                total = state.temp_progress[column] + existing_progress[column - 2]
+            if column in self.state.temp_progress:
+                total = self.state.temp_progress[column] + existing_progress[column - 2]
             else:
                 total = existing_progress[column - 2]
             combined_progress.append(total)
@@ -542,7 +591,7 @@ class HumanPlayer(Player):
         status += "\n"
 
         # Infer pipes
-        # TODO Not sure this is working
+        # TODO Not working
         completed_columns = {}
         player_completed_columns = defaultdict(int)
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
@@ -562,8 +611,8 @@ class HumanPlayer(Player):
 
             # Use a period instead of a '0' to make the chart
             # more readable.
-            if column in state.temp_progress:
-                status += "  +{:>2}".format(state.temp_progress[column])
+            if column in self.state.temp_progress:
+                status += "  +{:>2}".format(self.state.temp_progress[column])
                 continue
 
             status += "{:>5}".format('.')
@@ -592,33 +641,98 @@ class HumanPlayer(Player):
         status += "\n"
         print(status)
 
+    def print_marker_count(self):
+        marker_count = 3 - len(self.state.temp_progress)
+        if marker_count == 1:
+            print("1 free marker")
+        elif marker_count == 3:
+            print("--->>> 3 free markers")
+        else:
+            print("{} free markers".format(marker_count))
+
+    def print_info_block(self):
+        self.print_marker_count()
+        print("TempProgress: {}".format(self.state.temp_progress))
+        print("Current Rule28 score: {}".format(self.state.rule28()))
+        print("{:1.2f}: Initial P2 score".format(self.state.p2(self.name)))
+        print("{:1.2f}: TempProgress P2 score".format(self.state.p2_temp_progress(self.name)))
+        print("{:1.2f}: Combined P2 score".format(self.state.p2_combined(self.name)))
+
+    def compute_inc_rule28_score(self, choice_tuple):
+        return 11
+
+    def compute_p2_score(self, choice_tuple):
+        """
+        There are three possible inputs.
+            (1) Two different values
+            (2) Two identical values
+            (3) Single value
+
+        :param choice_tuple:
+        :return:
+        """
+        # For case (2), we need some special logic otherwise the
+        # returned value will be slightly lower.
+        isSame = False
+        if len(choice_tuple) == 2 and choice_tuple[0] == choice_tuple [1]:
+            isSame = True
+            choice_tuple = (choice_tuple[0],)
+
+        possible_total = 0
+        for ct in choice_tuple:
+            tp_row_rank = 0
+            if ct in self.state.temp_progress:
+                tp_row_rank = self.state.temp_progress[ct]
+            initial_plus_temp_progress = self.state.player_positions[self.name][ct-2] \
+                + tp_row_rank
+            if isSame:
+                possible_progress = initial_plus_temp_progress + 2
+            else:
+                possible_progress = initial_plus_temp_progress + 1
+            num_ranks_in_col = Board.get_ranks_by_column(ct)
+            possible_total += (possible_progress / num_ranks_in_col) ** 2 \
+                - (initial_plus_temp_progress / num_ranks_in_col) ** 2
+
+        return possible_total
+
+    def print_choices(self):
+        """
+        This replaces State.print_choices().
+        :return:
+        """
+        print("Turn #{}, your choices are:".format(self.state.turn))
+        for ctr, choice in enumerate(self.state.choices, start=1):
+            print("{}: {} Inc28-{} IncP2K-{:1.0f}"
+                  .format(ctr, choice, self.compute_inc_rule28_score(choice), 1000*self.compute_p2_score(choice)))
+
     def choose_columns(self, state):
-        state.display(percentage=True)
-        logging.debug("TempProgress: {}".format(state.temp_progress))
-        self.print_temp_progress(state)
-        print("Current Rule28 score: {}".format(state.rule28()))
-        print("{} free markers".format(3-len(state.temp_progress)))
-        state.print_choices()
+        self.state = state
+        self.state.display(percentage=True)
+        self.print_temp_progress_table()
+        self.print_info_block()
+        self.print_choices()
 
         user_input = None
         while True:
             try:
-                user_input = int(input("Enter: "))
+                user_input = int(input("Enter choice: "))
             except ValueError:
                 print("Try again.")
                 continue
 
-            if user_input not in range(1, len(state.choices)+1):
+            if user_input not in range(1, len(self.state.choices)+1):
                 print("Try again.")
                 continue
 
             break
 
-        return state.choices[user_input-1]
+        return self.state.choices[user_input-1]
 
     def stop_or_continue(self, state):
-        self.print_temp_progress(state)
-        print("Current Rule28 score: {}".format(state.rule28()))
+        self.state = state
+        self.print_temp_progress_table()
+        self.print_info_block()
+
         print("1: Stop\n2: Continue")
         user_input = input("Enter: ")
         return int(user_input)
@@ -640,6 +754,12 @@ class HumanPlayer(Player):
             break
 
         return user_input
+
+    # def bust_out(self):
+    #     print("==========================================================================")
+    #     for i in range(0,10):
+    #         print("========= BUSTED =========================================================")
+    #     print("==========================================================================")
 
 
 class SingleValueOdds(object):

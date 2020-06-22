@@ -9,7 +9,7 @@ import sys
 from collections import defaultdict
 
 from cantstop.lib.all_the_things import Game
-from cantstop.lib.bots import HexRollerBot, DecaRollerBot, ScoringBot, ChoosingScoringBot, CowardBot
+from cantstop.lib.bots.bots import *
 
 
 def set_logger(verbose_level):
