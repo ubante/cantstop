@@ -415,7 +415,9 @@ class State(object):
     """
     def __init__(self, choices, board_status, turn):
         self.choices = choices
-        self.player_positions, self.temp_progress = board_status  # Weird to use a tuple here.
+        self.player_positions = board_status[0]  # dict: name->list of current_rank_by_column
+        self.temp_progress = board_status[1]  # dict: column_num->temp_rank_by_that_column
+        # self.player_positions, self.temp_progress = board_status  # Weird to use a tuple here.
         self.turn = turn
 
     def display(self, percentage=False):
@@ -590,15 +592,14 @@ class HumanPlayer(Player):
                 status += "{:>5}".format("--")
         status += "\n"
 
-        # Infer pipes
-        # TODO Not working
+        # Infer pipes.  Considering using Column()s in State().
         completed_columns = {}
-        player_completed_columns = defaultdict(int)
         for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
-            ranks = Board.get_ranks_by_column(column)
-            if existing_progress[column - 2] == ranks:
-                completed_columns[column] = self.name
-                player_completed_columns[self.name] += 1
+            max_rank = Board.get_ranks_by_column(column)
+            for name in self.state.player_positions:
+                if self.state.player_positions[name][column-2] == max_rank:
+                    completed_columns[column] = name
+                    continue
 
         # Print out two rows.  The first is the temp progress.
         percentage = True  # Let's see which looks better.
@@ -700,10 +701,16 @@ class HumanPlayer(Player):
         This replaces State.print_choices().
         :return:
         """
-        print("Turn #{}, your choices are:".format(self.state.turn))
+        print("Turn #{}, your choices are:\n".format(self.state.turn))
+        print("          Inc28 IncP2K")
+        print("             -- --")
         for ctr, choice in enumerate(self.state.choices, start=1):
-            print("{}: {} Inc28-{} IncP2K-{:1.0f}"
-                  .format(ctr, choice, self.compute_inc_rule28_score(choice), 1000*self.compute_p2_score(choice)))
+            if len(choice) == 1:
+                print("{:2}: ({:2}, {:2}) {:2} {:1.0f}"
+                      .format(ctr, choice[0], "", self.compute_inc_rule28_score(choice), 1000*self.compute_p2_score(choice)))
+            else:
+                print("{:2}: ({:2}, {:2}) {:2} {:1.0f}"
+                      .format(ctr, choice[0], choice[1], self.compute_inc_rule28_score(choice), 1000*self.compute_p2_score(choice)))
 
     def choose_columns(self, state):
         self.state = state
