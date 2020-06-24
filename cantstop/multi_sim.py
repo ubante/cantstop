@@ -54,8 +54,8 @@ Examples:
     for i in range(0, args.iteration):
         print("\n>>>>>>\n>>>>>> Simulation #{}/{} <<<<<<\n>>>>>>".format(i+1, args.iteration))
         game = Game()
-        players = [ChoosingScoringBot, ScoringBot]
-        # players = [HexRollerBot, ScoringBot]
+        players = [ChoosingScoringBot, ScoringBot, RunningScoringBot]
+        # players = [ChoosingScoringBot, ScoringBot]
         for player in players:
             name = player.__name__
             game.add_player(player(name))

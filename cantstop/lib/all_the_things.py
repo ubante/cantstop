@@ -439,6 +439,9 @@ class State(object):
 
         return chosen_cols
 
+    def get_free_marker_count(self):
+        return 3 - len(self.temp_progress)
+
     @staticmethod
     def weight_column(col):
         """
@@ -529,13 +532,13 @@ class Player(object):
     """
     Superduperclass
 
-    These are the things a bot could do:
-        - try to delay using all the markers
+    TODO: These are the things a bot could do:
         - put the first marker close to the middle
         - put the last marker close to the sides
         - will stop if temp_progress wins the game even if there are extra markers
         - deprioritize columns almost won by opponent
         - score opponents to decide how aggressive to play
+        - switch from an early game scoring system to late game scoring system
     """
     index = 0  # To make the generic name unique.
 
@@ -544,6 +547,7 @@ class Player(object):
         I really don't want the base class to require a name.
         """
         self.name = "NoName{}".format(Player.index)
+        self.state = None
         Player.index += 1
 
     def choose_columns(self, state):

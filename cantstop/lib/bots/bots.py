@@ -1,5 +1,8 @@
 import logging
 
+"""
+The best bot is ChoosingScoringBot.
+"""
 from cantstop.lib.all_the_things import Player, State
 
 
@@ -130,7 +133,6 @@ class ScoringBot(Bot):
     """
     def __init__(self, name):
         super().__init__(name)
-        self.state = None  # This may need to go to Player()
 
     def choose_columns(self, state):
         return self.choose_already_selected_columns(state)
@@ -167,6 +169,45 @@ defaultdict(<class 'int'>, {'ChoosingScoringBot': 6655, 'ScoringBot': 3345})
             scores[i] = score
         best_choice_index = max(scores, key=scores.get)
         return state.choices[best_choice_index]
+
+
+class RunningScoringBot(ScoringBot):
+    """
+    "Running" means making many rolls.  To safely do this, this bot will do the same as
+    CSB except when placing the first marker, will prefer the middle columns.
+    """
+    def find_middle_column(self):
+        print("RUNNING")
+        scores = {}
+        for i, choice_tup in enumerate(self.state.choices):
+            score = 0
+            for choice in choice_tup:
+                score += State.weight_column(choice)
+            scores[i] = score
+        print("scores:")
+        print(scores)
+        best_choice_index = min(scores, key=scores.get)
+        print("best choice: {}".format(best_choice_index))
+        return self.state.choices[best_choice_index]
+
+    def choose_columns(self, state):
+        self.state = state
+        if self.state.get_free_marker_count() == 3:
+            return self.find_middle_column()
+
+        chosen_cols = self.state.get_current_columns(self.name)
+
+        scores = {}
+        for i, choice_tup in enumerate(self.state.choices):
+            score = 0
+            for choice in choice_tup:
+                # Lose points if this requires a new marker.
+                if choice not in chosen_cols:
+                    score -= 6
+                score += State.weight_column(choice)
+            scores[i] = score
+        best_choice_index = max(scores, key=scores.get)
+        return self.state.choices[best_choice_index]
 
 
 class RollerBot(Bot):
