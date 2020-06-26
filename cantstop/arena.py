@@ -10,14 +10,31 @@ import logging
 import sys
 
 
+class Tournament(object):
+    def __init__(self):
+        self.game_history = []
+        self.scoreboard = None
+
+    def begin(self):
+        # Find the players
+
+        # Build the brackets
+
+        # Run the first round
+
+        # Run the next rounds
+
+        # Report the results
+        pass
+
+
 def main():
     description = '''
-This simulation will see if the column lengths indeed correspond to the likelihood
-of rolling that value.
+This will take all the bots and find the best performer.
 '''
     epilog = '''
 Examples:
-./infinite_attempts.py
+./arena.py
 '''
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("-i", "--iteration", help="How many times to run?",
@@ -27,6 +44,9 @@ Examples:
                         stream=sys.stdout,
                         format='%(levelname)s - %(message)s')
     logging.debug("Starting up....")
+
+    t = Tournament()
+    t.begin()
 
 
 if __name__ == "__main__":

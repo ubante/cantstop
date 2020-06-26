@@ -548,6 +548,7 @@ class Player(object):
         """
         self.name = "NoName{}".format(Player.index)
         self.state = None
+        self.rating = 0  # not sure about this
         Player.index += 1
 
     def choose_columns(self, state):
@@ -664,6 +665,7 @@ class HumanPlayer(Player):
         print("{:1.2f}: Combined P2 score".format(self.state.p2_combined(self.name)))
 
     def compute_inc_rule28_score(self, choice_tuple):
+        # TODO incremental Rule28
         return 11
 
     def compute_p2_score(self, choice_tuple):
@@ -678,9 +680,9 @@ class HumanPlayer(Player):
         """
         # For case (2), we need some special logic otherwise the
         # returned value will be slightly lower.
-        isSame = False
-        if len(choice_tuple) == 2 and choice_tuple[0] == choice_tuple [1]:
-            isSame = True
+        is_same = False
+        if len(choice_tuple) == 2 and choice_tuple[0] == choice_tuple[1]:
+            is_same = True
             choice_tuple = (choice_tuple[0],)
 
         possible_total = 0
@@ -690,7 +692,7 @@ class HumanPlayer(Player):
                 tp_row_rank = self.state.temp_progress[ct]
             initial_plus_temp_progress = self.state.player_positions[self.name][ct-2] \
                 + tp_row_rank
-            if isSame:
+            if is_same:
                 possible_progress = initial_plus_temp_progress + 2
             else:
                 possible_progress = initial_plus_temp_progress + 1
@@ -711,10 +713,12 @@ class HumanPlayer(Player):
         for ctr, choice in enumerate(self.state.choices, start=1):
             if len(choice) == 1:
                 print("{:2}: ({:2}, {:2}) {:2} {:1.0f}"
-                      .format(ctr, choice[0], "", self.compute_inc_rule28_score(choice), 1000*self.compute_p2_score(choice)))
+                      .format(ctr, choice[0], "", self.compute_inc_rule28_score(choice),
+                              1000*self.compute_p2_score(choice)))
             else:
                 print("{:2}: ({:2}, {:2}) {:2} {:1.0f}"
-                      .format(ctr, choice[0], choice[1], self.compute_inc_rule28_score(choice), 1000*self.compute_p2_score(choice)))
+                      .format(ctr, choice[0], choice[1], self.compute_inc_rule28_score(choice),
+                              1000*self.compute_p2_score(choice)))
 
     def choose_columns(self, state):
         self.state = state
