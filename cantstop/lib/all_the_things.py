@@ -43,6 +43,7 @@ class Game(object):
         :return:
         """
         free_columns = self.board.get_incomplete_columns()
+        not_free_columns = self.board.get_complete_columns()
         roll_values = self.dice.get_sums()
         temp_columns = self.board.temporary_progress.keys()
 
@@ -55,6 +56,7 @@ class Game(object):
                 free_columns.remove(col)
 
         logging.debug("Available: {}".format(free_columns))
+        logging.debug("Not available: {}".format(not_free_columns))
         logging.debug("Rolls:     {}".format(roll_values))
 
         # If there are free markers, then the player can still choose
@@ -291,6 +293,10 @@ class Board(object):
 
         return incomplete_columns
 
+    def get_complete_columns(self):
+        ic = self.get_incomplete_columns()
+        return set(range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1)).difference(set(ic))
+
     @staticmethod
     def get_status_string(positions, percentage=False):
         """
@@ -417,7 +423,6 @@ class State(object):
         self.choices = choices
         self.player_positions = board_status[0]  # dict: name->list of current_rank_by_column
         self.temp_progress = board_status[1]  # dict: column_num->temp_rank_by_that_column
-        # self.player_positions, self.temp_progress = board_status  # Weird to use a tuple here.
         self.turn = turn
 
     def display(self, percentage=False):
@@ -453,6 +458,38 @@ class State(object):
             return 8 - col
         else:
             return col - 6
+
+    def get_players_percentage_squared_score(self):
+        """
+        Return a dict of each player's scores.  Use this to find your relative
+        weakness or strength.
+
+        :return: defaultdict name -> int
+        """
+        scores = defaultdict(int)
+        for name in self.player_positions:
+            for i, rank_count in enumerate(self.player_positions[name]):
+                col = i + 2
+
+                # This might exist elsewhere.
+                scores[name] += (rank_count / Board.get_ranks_by_column(col)) ** 2 * 100
+        return scores
+
+    def get_players_rule28_score(self):
+        """
+        Return a dict of each player's scores.  Use this to find your relative
+        weakness or strength.
+
+        :return: defaultdict name -> int
+        """
+        scores = defaultdict(int)
+        for name in self.player_positions:
+            for i, rank_count in enumerate(self.player_positions[name]):
+                col = i + 2
+                # print("{} has {} ranks of col {} = {}"
+                #       .format(name, rank_count, col, rank_count * self.weight_column(col)))
+                scores[name] += rank_count * self.weight_column(col)
+        return scores
 
     def rule28(self):
         """
@@ -656,6 +693,19 @@ class HumanPlayer(Player):
         else:
             print("{} free markers".format(marker_count))
 
+    def print_competition(self):
+        opp_r28 = self.state.get_players_rule28_score()
+        print("Current Rule28 scores:")
+        for name in sorted(opp_r28.keys()):
+            print("{:>19}: {:3}".format(name, opp_r28[name]))
+
+        # TODO this does not add up
+        opp_p2 = self.state.get_players_percentage_squared_score()
+        print("Current P2 scores:")
+        for name in sorted(opp_p2.keys()):
+            print("{:>19}: {:4.0f}".format(name, opp_p2[name]))
+        print()
+
     def print_info_block(self):
         self.print_marker_count()
         print("TempProgress: {}".format(self.state.temp_progress))
@@ -723,7 +773,9 @@ class HumanPlayer(Player):
     def choose_columns(self, state):
         self.state = state
         self.state.display(percentage=True)
+        # self.state.display(percentage=False)
         self.print_temp_progress_table()
+        self.print_competition()
         self.print_info_block()
         self.print_choices()
 
