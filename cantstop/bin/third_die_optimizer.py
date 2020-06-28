@@ -42,7 +42,7 @@ If 7 and something greater than 7, choose 6.
 If 3/5, choose 8.
 If 9/11, choose 6.
 If both are less than 7, choose 8.
-If both are greather than 7, choose 6.
+If both are greater than 7, choose 6.
 Otherwise, choose 7.
 
 Given 9/11, if you then get a 2, your hit odds in the next roll are 63.7%

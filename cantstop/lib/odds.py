@@ -121,7 +121,7 @@ class Triplet(object):
         # odds = 1 - (odds1 * odds2 * odds3)
 
         if percent_format:
-            return "{:3.1f}%".format(100*odds)
+            return "{:3.1f}%".format(100 * odds)
         else:
             return odds
 
@@ -137,6 +137,7 @@ class RollSet(object):
         self.roll_combinations = []  # List of unsorted tuples.
         self.roll_combinations_length = 6 * 6 * 6 * 6
         self.roll_sorted_combinations = []
+        self.sum_combinations = []
         for a in range(1, 7):
             for b in range(1, 7):
                 for c in range(1, 7):
@@ -153,6 +154,8 @@ class RollSet(object):
                             self.possibilities[t] += 1
                             self.possibilities_ctr += 1
 
+                        self.sum_combinations.append((a + b, a + c, a + d, b + c, b + d, c + d))
+
         for a in range(1, 7):
             for b in range(a, 7):
                 for c in range(b, 7):
@@ -164,6 +167,7 @@ class ScoreRule28(object):
     """
     This is a heuristic described in https://www.aaai.org/ocs/index.php/FLAIRS/2009/paper/download/123/338
     """
+
     def score(self, columns):
         """
         Accept a dict of column ranks and sum the score of each column.  See link.
@@ -173,7 +177,7 @@ class ScoreRule28(object):
         """
         score = 0
         for c in columns:
-            multiplier = abs(7-c) + 1
+            multiplier = abs(7 - c) + 1
             score += multiplier * columns[c]
 
         return score
@@ -217,6 +221,53 @@ class TripleValueOdds(object):
                             continue
 
         return hits / possibilities
+
+
+class AttemptHitter(object):
+    """
+    Accept a triplet of pair-sums and return the percentage odds that the next attempt
+    will hit.
+
+    Since we pass the triplet to the constructor, this class seems too disposable....
+    """
+
+    def __init__(self, trips):
+        self.trips = trips
+        self.rollset = RollSet()
+        self.next_attempt_odds = None
+        self.compute_next_attempt_odds()
+
+    def __repr__(self):
+        return "{:4.1f}%".format(self.next_attempt_odds)
+
+    def compute_next_attempt_odds(self):
+        """
+length = 1296
+hit_ctr = 676
+If your columns are [2, 3, 4], then your odds of a hit are 52.2%
+
+length = 1296
+hit_ctr = 1192
+If your columns are [6, 7, 8], then your odds of a hit are 92.0%
+
+        :return:
+        """
+        hit_ctr = 0
+        miss_ctr = 0
+        tripset = set(self.trips)
+        for roll in self.rollset.sum_combinations:
+            if tripset.intersection(set(roll)):
+                hit_ctr += 1
+                # print("{} hits".format(roll))
+            else:
+                miss_ctr += 1
+                print("{} misses".format(roll))
+
+        print("length = {}".format(len(self.rollset.sum_combinations)))
+        print("hit_ctr = {}".format(hit_ctr))
+        print("miss_ctr = {}".format(miss_ctr))
+
+        self.next_attempt_odds = 100 * hit_ctr / len(self.rollset.sum_combinations)
 
 
 def roll_the_dice(iterations):
@@ -273,8 +324,8 @@ def get_column_triplets():
     """
     triplets = []
     for a in range(2, 13):
-        for b in range(a+1, 13):
-            for c in range(b+1, 13):
+        for b in range(a + 1, 13):
+            for c in range(b + 1, 13):
                 triplets.append((a, b, c))
     return triplets
 
