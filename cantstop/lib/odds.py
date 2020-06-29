@@ -134,9 +134,11 @@ class RollSet(object):
     def __init__(self):
         self.possibilities = defaultdict(int)
         self.possibilities_ctr = 0
-        self.roll_combinations = []  # List of unsorted tuples.
+        # List of unsorted tuples, eg (1, 1, 5, 6).
+        self.roll_combinations = []
         self.roll_combinations_length = 6 * 6 * 6 * 6
         self.roll_sorted_combinations = []
+        # List of unsorted tuples, eg (2, 6, 7, 6, 7, 11)
         self.sum_combinations = []
         for a in range(1, 7):
             for b in range(1, 7):
@@ -261,11 +263,11 @@ If your columns are [6, 7, 8], then your odds of a hit are 92.0%
                 # print("{} hits".format(roll))
             else:
                 miss_ctr += 1
-                print("{} misses".format(roll))
+                # print("{} misses".format(roll))
 
-        print("length = {}".format(len(self.rollset.sum_combinations)))
-        print("hit_ctr = {}".format(hit_ctr))
-        print("miss_ctr = {}".format(miss_ctr))
+        # print("length = {}".format(len(self.rollset.sum_combinations)))
+        # print("hit_ctr = {}".format(hit_ctr))
+        # print("miss_ctr = {}".format(miss_ctr))
 
         self.next_attempt_odds = 100 * hit_ctr / len(self.rollset.sum_combinations)
 

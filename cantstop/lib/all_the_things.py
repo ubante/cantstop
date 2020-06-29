@@ -18,7 +18,7 @@ import sys
 from collections import defaultdict
 from random import shuffle
 
-from cantstop.lib.odds import Dice, perc
+from cantstop.lib.odds import Dice, perc, AttemptHitter
 
 
 class Settings(object):
@@ -690,8 +690,14 @@ class HumanPlayer(Player):
             print("1 free marker")
         elif marker_count == 3:
             print("--->>> 3 free markers")
+        elif marker_count == 2:
+            print("2 free markers")
         else:
-            print("{} free markers".format(marker_count))
+            # print(self.state.temp_progress.keys())
+            odd_to_hit_next_attempt = AttemptHitter(self.state.temp_progress.keys())
+            print("{} free markers - odds to hit on next attempt: {}"
+                  .format(marker_count, odd_to_hit_next_attempt))
+            print("I need to balance the risk of hitting against what I've gained so far.")
 
     def print_competition(self):
         opp_r28 = self.state.get_players_rule28_score()
@@ -752,14 +758,25 @@ class HumanPlayer(Player):
 
         return possible_total
 
+    def compute_k_score(self, choice_tuple):
+        """
+        This will improve on P2 by giving weight to completing a column.  And for
+        winning the game.
+
+        :param choice_tuple:
+        :return:
+        """
+        # TODO figure this out and add caller to L784
+        return 0.0
+
     def print_choices(self):
         """
         This replaces State.print_choices().
         :return:
         """
         print("Turn #{}, your choices are:\n".format(self.state.turn))
-        print("          Inc28 IncP2K")
-        print("             -- --")
+        print("          Inc28 IncP2K IncK")
+        print("             -- ------ --")
         for ctr, choice in enumerate(self.state.choices, start=1):
             if len(choice) == 1:
                 print("{:2}: ({:2}, {:2}) {:2} {:1.0f}"
@@ -773,7 +790,7 @@ class HumanPlayer(Player):
     def choose_columns(self, state):
         self.state = state
         self.state.display(percentage=True)
-        # self.state.display(percentage=False)
+        self.state.display(percentage=False)
         self.print_temp_progress_table()
         self.print_competition()
         self.print_info_block()

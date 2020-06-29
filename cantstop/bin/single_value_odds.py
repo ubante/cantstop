@@ -24,7 +24,7 @@ Examples:
     s2 = SingleValueOdds()
     s3 = SingleValueOdds()
 
-    print(s1.of(5))
+    print(s1.of(3))
     print(s2.of(2))
     print(s3.of(13))
 
