@@ -20,9 +20,6 @@ Examples:
     # This is just to generate the usage.
     argparse.ArgumentParser(description=description, epilog=epilog)
 
-    x = {1: 2, 3: 4, 4: 3, 2: 1, 0: 0}
-    var = {k: v for k, v in sorted(x.items(), key=lambda item: item[1])}
-
     results = {}
     column_ctr = 0
     for a in range(2, 11):
@@ -34,6 +31,38 @@ Examples:
 
     print("There are {} possible column combinations.".format(column_ctr))
 
+    # Find all the results.
+    ordered = sorted(results, key=results.get, reverse=True)
+    print("\nThe best to the worst starting columns:")
+    for i in ordered:
+        print("{}: {:3.1f}%".format(i, results[i]))
+
+    # Find the top ten results.
+    print("\nThe best starting columns:")
+    for i in ordered[0:9]:
+        print("{}: {:3.1f}%".format(i, results[i]))
+
+    # Find the bottom ten results.
+    ordered = sorted(results, key=results.get)
+    print("\nThe worst starting columns:")
+    for i in ordered[0:9]:
+        print("{}: {:3.1f}%".format(i, results[i]))
+
+    # Do the same but without the seven column.
+    print("\n\nMinus the seven column.")
+    minus_seven = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    results = {}
+    column_ctr = 0
+    for a in range(2, 11):
+        for b in range(a+1, 12):
+            for c in range(b+1, 13):
+                column_ctr += 1
+                columns_chosen = [a, b, c]
+                results[tuple(columns_chosen)] = \
+                    AttemptHitter(columns_chosen, available_cols=minus_seven).next_attempt_odds
+
+    print("There are {} possible column combinations.".format(column_ctr))
+
     # Find the top ten results.
     ordered = sorted(results, key=results.get, reverse=True)
     print("\nThe best starting columns:")
@@ -42,7 +71,7 @@ Examples:
 
     # Find the bottom ten results.
     ordered = sorted(results, key=results.get)
-    print("\nThe worset starting columns:")
+    print("\nThe worst starting columns:")
     for i in ordered[0:9]:
         print("{}: {:3.1f}%".format(i, results[i]))
 

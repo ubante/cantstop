@@ -19,11 +19,7 @@ from collections import defaultdict
 from random import shuffle
 
 from cantstop.lib.odds import Dice, perc, AttemptHitter
-
-
-class Settings(object):
-    MIN_COLUMN = 2
-    MAX_COLUMN = 12
+from cantstop.lib.settings import Settings
 
 
 class Game(object):
@@ -243,7 +239,7 @@ class Board(object):
         self.initialize()
 
     def initialize(self):
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
+        for column in Settings.COLUMN_RANGE:
             num_positions = Board.get_ranks_by_column(column)
             self.columns[column] = Column(num_positions, column)
 
@@ -267,7 +263,7 @@ class Board(object):
         self.players.append(p)
 
         # Begin everyone at zero on each column.
-        for position in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
+        for position in Settings.COLUMN_RANGE:
             self.columns[position].add_player(p.name)
 
     def get_player_positions(self):
@@ -295,7 +291,7 @@ class Board(object):
 
     def get_complete_columns(self):
         ic = self.get_incomplete_columns()
-        return set(range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1)).difference(set(ic))
+        return list(set(Settings.COLUMN_RANGE).difference(set(ic)))
 
     @staticmethod
     def get_status_string(positions, percentage=False):
@@ -307,11 +303,11 @@ class Board(object):
         """
         # Generate the header rows.
         status = "{:>19}".format("")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             status += "{:>5}".format(column)
         status += "\n"
         status += "{:>19}".format("")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             if column < 10:
                 status += "{:>5}".format("-")
             else:
@@ -324,7 +320,7 @@ class Board(object):
         completed_columns = {}
         player_completed_columns = defaultdict(int)
         for player_name in positions:
-            for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            for column in Settings.COLUMN_RANGE:
                 ranks = Board.get_ranks_by_column(column)
                 if positions[player_name][column - 2] == ranks:
                     completed_columns[column] = player_name
@@ -334,7 +330,7 @@ class Board(object):
         for player_name in positions:
             name_score = "{} ({})".format(player_name, player_completed_columns[player_name])
             status += "{:>19}".format(name_score)
-            for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+            for column in Settings.COLUMN_RANGE:
                 # Use pipes to mark completed columns won by another player.
                 if column in completed_columns and completed_columns[column] != player_name:
                     status += "{:>5}".format('||')
@@ -500,7 +496,7 @@ class State(object):
         :return:
         """
         score_by_col = {}
-        for col in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1):
+        for col in Settings.COLUMN_RANGE:
             score_by_col[col] = State.weight_column(col)
 
         score28 = 0
@@ -614,7 +610,7 @@ class HumanPlayer(Player):
     def print_temp_progress_table(self):
         existing_progress = self.state.player_positions[self.name]  # List
         combined_progress = []
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             if column in self.state.temp_progress:
                 total = self.state.temp_progress[column] + existing_progress[column - 2]
             else:
@@ -623,11 +619,11 @@ class HumanPlayer(Player):
 
         # Header line
         status = "{:>19}".format("Temp Progress")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             status += "{:>5}".format(column)
         status += "\n"
         status += "{:>19}".format("")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             if column < 10:
                 status += "{:>5}".format("-")
             else:
@@ -636,7 +632,7 @@ class HumanPlayer(Player):
 
         # Infer pipes.  Considering using Column()s in State().
         completed_columns = {}
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             max_rank = Board.get_ranks_by_column(column)
             for name in self.state.player_positions:
                 if self.state.player_positions[name][column-2] == max_rank:
@@ -646,7 +642,7 @@ class HumanPlayer(Player):
         # Print out two rows.  The first is the temp progress.
         percentage = True  # Let's see which looks better.
         status += "{:>19}".format("")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             # Use pipes to mark completed columns won by another player.
             if column in completed_columns and completed_columns[column] != self.name:
                 status += "{:>5}".format('||')
@@ -663,7 +659,7 @@ class HumanPlayer(Player):
 
         # And the second is the combined.
         status += "{:>19}".format("")
-        for column in range(Settings.MIN_COLUMN, Settings.MAX_COLUMN + 1):
+        for column in Settings.COLUMN_RANGE:
             # Use pipes to mark completed columns won by another player.
             if column in completed_columns and completed_columns[column] != self.name:
                 status += "{:>5}".format('||')

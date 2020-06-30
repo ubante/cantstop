@@ -15,6 +15,8 @@ import logging
 from collections import defaultdict
 from random import randint
 
+from cantstop.lib.settings import Settings
+
 
 class Die(object):
     """
@@ -83,7 +85,7 @@ class Triplet(object):
         if c not in [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]:  # lol
             raise ValueError("'c' value of '{}' is not zero and not in [2, 12]".format(c))
 
-        self.values = sorted[a, b, c]
+        self.values = sorted([a, b, c])
         self.rs = RollSet()
 
     def __repr__(self):
@@ -140,6 +142,9 @@ class RollSet(object):
         self.roll_sorted_combinations = []
         # List of unsorted tuples, eg (2, 6, 7, 6, 7, 11)
         self.sum_combinations = []
+        self.compute_combinations()
+
+    def compute_combinations(self):
         for a in range(1, 7):
             for b in range(1, 7):
                 for c in range(1, 7):
@@ -170,7 +175,8 @@ class ScoreRule28(object):
     This is a heuristic described in https://www.aaai.org/ocs/index.php/FLAIRS/2009/paper/download/123/338
     """
 
-    def score(self, columns):
+    @staticmethod
+    def score(columns):
         """
         Accept a dict of column ranks and sum the score of each column.  See link.
 
@@ -233,9 +239,10 @@ class AttemptHitter(object):
     Since we pass the triplet to the constructor, this class seems too disposable....
     """
 
-    def __init__(self, trips):
+    def __init__(self, trips, available_cols=range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1)):
         self.trips = trips
         self.rollset = RollSet()
+        self.available_cols = available_cols
         self.next_attempt_odds = None
         self.compute_next_attempt_odds()
 
