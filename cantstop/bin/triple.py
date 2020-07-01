@@ -6,7 +6,7 @@ A: XXX
 """
 import argparse
 
-from cantstop.lib.odds import AttemptHitter
+from cantstop.lib.odds import HitPredictor
 
 
 def main():
@@ -22,12 +22,15 @@ Examples:
 
     results = {}
     column_ctr = 0
+    hp = HitPredictor()
     for a in range(2, 11):
         for b in range(a+1, 12):
             for c in range(b+1, 13):
                 column_ctr += 1
                 columns_chosen = [a, b, c]
-                results[tuple(columns_chosen)] = AttemptHitter(columns_chosen).next_attempt_odds
+                # results[tuple(columns_chosen)] = AttemptHitter(columns_chosen).next_attempt_odds
+                results[tuple(columns_chosen)] = \
+                    hp.compute_next_attempt_odds(columns_chosen)
 
     print("There are {} possible column combinations.".format(column_ctr))
 
@@ -49,19 +52,29 @@ Examples:
         print("{}: {:3.1f}%".format(i, results[i]))
 
     # Do the same but without the seven column.
-    print("\n\nMinus the seven column.")
-    minus_seven = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    print("\n\n=====================================\nMinus the seven column.\n")
+    minus_seven = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+    minus_odd = [2, 4, 6, 8, 10, 12]
     results = {}
     column_ctr = 0
+    hp = HitPredictor()
+    hp.update_columns(minus_seven)
+    # hp.update_columns(minus_odd)
     for a in range(2, 11):
         for b in range(a+1, 12):
             for c in range(b+1, 13):
                 column_ctr += 1
                 columns_chosen = [a, b, c]
                 results[tuple(columns_chosen)] = \
-                    AttemptHitter(columns_chosen, available_cols=minus_seven).next_attempt_odds
+                    hp.compute_next_attempt_odds(columns_chosen)
 
     print("There are {} possible column combinations.".format(column_ctr))
+
+    # Find all the results.
+    # ordered = sorted(results, key=results.get, reverse=True)
+    # print("\nThe best to the worst starting columns:")
+    # for i in ordered:
+    #     print("{}: {:3.1f}%".format(i, results[i]))
 
     # Find the top ten results.
     ordered = sorted(results, key=results.get, reverse=True)

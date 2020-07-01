@@ -144,7 +144,15 @@ class RollSet(object):
         self.sum_combinations = []
         self.compute_combinations()
 
+    def reset(self):
+        self.roll_combinations = []
+        self.possibilities = defaultdict(int)
+        self.possibilities_ctr = 0
+        self.sum_combinations = []
+        self.roll_sorted_combinations = []
+
     def compute_combinations(self):
+        self.reset()
         for a in range(1, 7):
             for b in range(1, 7):
                 for c in range(1, 7):
@@ -162,6 +170,46 @@ class RollSet(object):
                             self.possibilities_ctr += 1
 
                         self.sum_combinations.append((a + b, a + c, a + d, b + c, b + d, c + d))
+
+        for a in range(1, 7):
+            for b in range(a, 7):
+                for c in range(b, 7):
+                    for d in range(c, 7):
+                        self.roll_sorted_combinations.append((a, b, c, d))
+
+    def compute_limited_combinations(self, available_columns=Settings.COLUMN_RANGE):
+        """
+        Keep this separate from compute_combinations() until it's clear what is needed.
+
+        Compute the combinations when a one or more columns have been won, ie are
+        unavailable.
+
+        :return:
+        """
+        self.reset()
+        for a in range(1, 7):
+            for b in range(1, 7):
+                for c in range(1, 7):
+                    for d in range(1, 7):
+                        self.roll_combinations.append((a, b, c, d))
+                        total = defaultdict(int)
+                        total[a + b] = 1
+                        total[a + c] = 1
+                        total[a + d] = 1
+                        total[b + c] = 1
+                        total[b + d] = 1
+                        total[c + d] = 1
+                        for t in total:
+                            self.possibilities[t] += 1
+                            self.possibilities_ctr += 1
+
+                        good_pairs = []
+                        for pair_sum in [a + b, a + c, a + d, b + c, b + d, c + d]:
+                            if pair_sum in available_columns:
+                                good_pairs.append(pair_sum)
+
+                        self.sum_combinations.append(tuple(good_pairs))
+        print("There are {} combinations of pair-sums.".format(len(self.sum_combinations)))
 
         for a in range(1, 7):
             for b in range(a, 7):
@@ -231,39 +279,29 @@ class TripleValueOdds(object):
         return hits / possibilities
 
 
-class AttemptHitter(object):
+class HitPredictor(object):
     """
     Accept a triplet of pair-sums and return the percentage odds that the next attempt
     will hit.
-
-    Since we pass the triplet to the constructor, this class seems too disposable....
     """
-
-    def __init__(self, trips, available_cols=range(Settings.MIN_COLUMN, Settings.MAX_COLUMN+1)):
-        self.trips = trips
+    def __init__(self):
         self.rollset = RollSet()
-        self.available_cols = available_cols
-        self.next_attempt_odds = None
-        self.compute_next_attempt_odds()
+        self.available_cols = Settings.COLUMN_RANGE
 
-    def __repr__(self):
-        return "{:4.1f}%".format(self.next_attempt_odds)
-
-    def compute_next_attempt_odds(self):
+    def update_columns(self, available_columns):
         """
-length = 1296
-hit_ctr = 676
-If your columns are [2, 3, 4], then your odds of a hit are 52.2%
+        Use this to make predictions on a board where some columns have already been won.
 
-length = 1296
-hit_ctr = 1192
-If your columns are [6, 7, 8], then your odds of a hit are 92.0%
-
+        :param available_columns:
         :return:
         """
+        self.available_cols = available_columns
+        self.rollset.compute_limited_combinations(self.available_cols)
+
+    def compute_next_attempt_odds(self, trips):
         hit_ctr = 0
         miss_ctr = 0
-        tripset = set(self.trips)
+        tripset = set(trips)
         for roll in self.rollset.sum_combinations:
             if tripset.intersection(set(roll)):
                 hit_ctr += 1
@@ -276,7 +314,8 @@ If your columns are [6, 7, 8], then your odds of a hit are 92.0%
         # print("hit_ctr = {}".format(hit_ctr))
         # print("miss_ctr = {}".format(miss_ctr))
 
-        self.next_attempt_odds = 100 * hit_ctr / len(self.rollset.sum_combinations)
+        next_attempt_odds = 100 * hit_ctr / len(self.rollset.sum_combinations)
+        return next_attempt_odds
 
 
 def roll_the_dice(iterations):

@@ -7,7 +7,7 @@ A: Between 43.8% and 92.0%.
 """
 import argparse
 
-from cantstop.lib.odds import AttemptHitter
+from cantstop.lib.odds import HitPredictor
 
 
 def main():
@@ -25,9 +25,10 @@ Examples:
     # current_sums = [2, 3, 4]
     current_sums = [6, 7, 8]
     # current_sums = [2, 3, 12]
-    odds = AttemptHitter(current_sums)
+    hp = HitPredictor()
+    odds = hp.compute_next_attempt_odds(current_sums)
 
-    print("If your columns are {}, then your odds of a hit are {}".format(current_sums, odds))
+    print("If your columns are {}, then your odds of a hit are {:3.1f}%".format(current_sums, odds))
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ import sys
 from collections import defaultdict
 from random import shuffle
 
-from cantstop.lib.odds import Dice, perc, AttemptHitter
+from cantstop.lib.odds import Dice, perc, HitPredictor
 from cantstop.lib.settings import Settings
 
 
@@ -689,9 +689,9 @@ class HumanPlayer(Player):
         elif marker_count == 2:
             print("2 free markers")
         else:
-            # print(self.state.temp_progress.keys())
-            odd_to_hit_next_attempt = AttemptHitter(self.state.temp_progress.keys())
-            print("{} free markers - odds to hit on next attempt: {}"
+            hp = HitPredictor()
+            odd_to_hit_next_attempt = hp.compute_next_attempt_odds(self.state.temp_progress.keys())
+            print("{} free markers - odds to hit on next attempt: {:3.1f}%"
                   .format(marker_count, odd_to_hit_next_attempt))
             print("I need to balance the risk of hitting against what I've gained so far.")
 
