@@ -18,5 +18,6 @@ if the next attempt does not hit
 * free marker: a marker that can be placed on an available column
 * available column: a column where a player has not placed a marker in the top rank
 * tournament: a series of games
-* game:
+* round: a set of turns where each player gets exactly one turn
+* game: a set of rounds until a player wins three columns
 * column combinations: set of up to three columns the player will make in each turn

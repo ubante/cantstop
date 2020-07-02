@@ -36,7 +36,7 @@ Examples:
     game.add_player(RunningScoringBot("RSB"))
     game.run()
 
-    game.print_summary()
+    game.print_conclusion()
 
 
 if __name__ == "__main__":

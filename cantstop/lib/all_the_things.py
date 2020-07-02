@@ -138,7 +138,7 @@ class Game(object):
                             # Once there is a winner, return to main.
                             return
 
-    def print_summary(self):
+    def print_conclusion(self):
         """
         This could be called once there's a winner to display stats.
         :return:
@@ -150,7 +150,13 @@ class Game(object):
         self.board.print_status()
         print("The game ended after {} turns.  And the winner is: {}"
               .format(self.round_ctr, self.winner))
-        #TODO Would be nice to see the P2 and R28 scores here.
+
+        p2_score = State.get_p2_scores(self.board.get_status()[0])
+        r28_score = State.get_r28_scores(self.board.get_status()[0])
+        print("\n{:>19}{:>6}{:>6}".format("Player scores", "P2", "R28"))
+        print("{:>19}{:>6}{:>6}".format("-------------", "---", "---"))
+        for p in self.players:
+            print("{:>19}{:6.0f}{:6.0f}".format(p.name, p2_score[p.name], r28_score[p.name]))
 
 
 class Column(object):
@@ -162,11 +168,9 @@ class Column(object):
     At each rank, there is a list of players at that rank.  All players start at
     the zeroth rank of each column.
     """
-    def __init__(self, nums, column_number):
-        """
-        Now that column_number is passed, I should reconsider if we need nums.
 
-        :param nums: The number of ranks in this column.
+    def __init__(self, column_number):
+        """
         :param column_number: The die roll that corresponds to this column, eg
         7 or 12.
         """
@@ -203,7 +207,7 @@ class Column(object):
 
     def initialize_positions(self):
         self.positions = []
-        for rank in range(0, self.ranks+1):
+        for rank in range(0, self.ranks + 1):
             self.positions.append([])
 
     def add_player(self, name):
@@ -260,8 +264,7 @@ class Board(object):
 
     def initialize(self):
         for column in Settings.COLUMN_RANGE:
-            num_positions = Column.get_ranks_by_column(column)
-            self.columns[column] = Column(num_positions, column)
+            self.columns[column] = Column(column)
 
     def reset_progress(self):
         self.temporary_progress = {}
@@ -282,7 +285,7 @@ class Board(object):
         for c in self.columns:
             for rank, players_at_this_rank in enumerate(self.columns[c].positions):
                 for p in players_at_this_rank:
-                    player_positions[p][c-2] = rank
+                    player_positions[p][c - 2] = rank
 
         return player_positions
 
@@ -300,6 +303,22 @@ class Board(object):
     def get_complete_columns(self):
         ic = self.get_incomplete_columns()
         return list(set(Settings.COLUMN_RANGE).difference(set(ic)))
+
+    @staticmethod
+    def get_columns_won_by_player(positions, name):
+        """
+        Getting silly that State() doesn't have a Board() object.
+        :param positions:
+        :param name:
+        :return:
+        """
+        columns_won = []
+        for column in Settings.COLUMN_RANGE:
+            ranks = Column.get_ranks_by_column(column)
+            if positions[name][column - 2] >= ranks:
+                columns_won.append(column)
+
+        return columns_won
 
     @staticmethod
     def get_status_string(positions, percentage=False):
@@ -405,6 +424,15 @@ class Board(object):
 
         return won
 
+    def get_won_columns_by_player(self, name):
+        # This may be unusable.
+        won = []
+        for col in self.columns:
+            if self.columns[col].winner and name == self.columns[col].winner:
+                won.append(col)
+
+        return won
+
     def check_for_winner(self):
         col_winners = defaultdict(int)
         for col in self.columns:
@@ -423,6 +451,7 @@ class State(object):
     to act.  The state is composed of the game board and the available column
     choices.
     """
+
     def __init__(self, choices, board_status, turn):
         self.choices = choices
         self.player_positions = board_status[0]  # dict: name->list of current_rank_by_column
@@ -462,6 +491,34 @@ class State(object):
             return 8 - col
         else:
             return col - 6
+
+    @staticmethod
+    def get_p2_scores(players_position):
+        """
+        Us this to find your relative weakness or strength.
+
+        :param players_position: (dict) name->list of current_rank_by_column
+        :return: (defaultdict) name -> int
+        """
+        scores = defaultdict(int)
+        for name in players_position:
+            for i, rank_count in enumerate(players_position[name]):
+                col = i + 2
+
+                # This might exist elsewhere.
+                scores[name] += (rank_count / Column.get_ranks_by_column(col)) ** 2 * 100
+        return scores
+
+    @staticmethod
+    def get_r28_scores(players_position):
+        scores = defaultdict(int)
+        for name in players_position:
+            for i, rank_count in enumerate(players_position[name]):
+                col = i + 2
+                # print("{} has {} ranks of col {} = {}"
+                #       .format(name, rank_count, col, rank_count * self.weight_column(col)))
+                scores[name] += rank_count * State.weight_column(col)
+        return scores
 
     def get_players_percentage_squared_score(self):
         """
@@ -538,15 +595,7 @@ class State(object):
             p2 = p * p
             p2_score += p2
 
-        return p2_score
-
-    def p2_temp_progress(self, name):
-        """
-        The incremental p2 score contributed by temp_progress only.
-
-        :return:
-        """
-        return self.p2_combined(name) - self.p2(name)
+        return p2_score * 100
 
     def p2_combined(self, name):
         """
@@ -566,7 +615,15 @@ class State(object):
             p2 = p * p
             p2_score += p2
 
-        return p2_score
+        return p2_score * 100
+
+    def p2_temp_progress(self, name):
+        """
+        The incremental p2 score contributed by temp_progress only.
+
+        :return:
+        """
+        return self.p2_combined(name) - self.p2(name)
 
 
 class Player(object):
@@ -643,7 +700,7 @@ class HumanPlayer(Player):
         for column in Settings.COLUMN_RANGE:
             max_rank = Column.get_ranks_by_column(column)
             for name in self.state.player_positions:
-                if self.state.player_positions[name][column-2] == max_rank:
+                if self.state.player_positions[name][column - 2] == max_rank:
                     completed_columns[column] = name
                     continue
 
@@ -720,9 +777,9 @@ class HumanPlayer(Player):
         self.print_marker_count()
         print("TempProgress: {}".format(self.state.temp_progress))
         print("Current Rule28 score: {}".format(self.state.rule28()))
-        print("{:1.2f}: Initial P2 score".format(self.state.p2(self.name)))
-        print("{:1.2f}: TempProgress P2 score".format(self.state.p2_temp_progress(self.name)))
-        print("{:1.2f}: Combined P2 score".format(self.state.p2_combined(self.name)))
+        print("{:3.1f}: Initial P2 score".format(self.state.p2(self.name)))
+        print("{:3.1f}: TempProgress P2 score".format(self.state.p2_temp_progress(self.name)))
+        print("{:3.1f}: Combined P2 score".format(self.state.p2_combined(self.name)))
 
     def compute_inc_rule28_score(self, choice_tuple):
         # TODO incremental Rule28
@@ -750,28 +807,56 @@ class HumanPlayer(Player):
             tp_row_rank = 0
             if ct in self.state.temp_progress:
                 tp_row_rank = self.state.temp_progress[ct]
-            initial_plus_temp_progress = self.state.player_positions[self.name][ct-2] \
-                + tp_row_rank
+            initial_plus_temp_progress = self.state.player_positions[self.name][ct - 2] + tp_row_rank
             if is_same:
                 possible_progress = initial_plus_temp_progress + 2
             else:
                 possible_progress = initial_plus_temp_progress + 1
             num_ranks_in_col = Column.get_ranks_by_column(ct)
-            possible_total += (possible_progress / num_ranks_in_col) ** 2 \
-                - (initial_plus_temp_progress / num_ranks_in_col) ** 2
+            possible_total += (possible_progress / num_ranks_in_col) ** 2 - \
+                              (initial_plus_temp_progress / num_ranks_in_col) ** 2
 
-        return possible_total
+        return possible_total * 1000
 
     def compute_k_score(self, choice_tuple):
         """
-        This will improve on P2 by giving weight to completing a column.  And for
-        winning the game.
+        This will improve on P2 by giving weight to completing a column.  And
+        for winning the game.
+
+                      Inc28 IncP2K IncK
+                         -- ------ ----
+             1: ( 7,  8) 11   191  9000
+             2: ( 5,   ) 11    12   12
+
+        Later, we can consider the case when the first marker placed could win
+        column 7, but we're so far ahead of all other players in column 7, that
+        we decide to choose another column knowing that we may get a chance at
+        7 in the following attempt.  Albacadabra
 
         :param choice_tuple:
         :return:
         """
-        # TODO figure this out and add caller to L784
-        return 0.0
+        k = self.compute_p2_score(choice_tuple)
+
+        for choice in choice_tuple:
+            # An additional 300 points should be enough additional weight.
+            # If this choice wins two columns, then this loop will add 600
+            # points which should be compelling in all possible cases.
+            tp = 0
+            if choice in self.state.temp_progress:
+                tp = self.state.temp_progress[choice]
+
+            num_ranks = Column.get_ranks_by_column(choice)
+            if self.state.player_positions[self.name][choice - 2] + \
+                    tp + 1 >= num_ranks:
+                k += 300
+
+                # If this choice wins the game, return a sufficiently large number
+                # such that this choice is always chosen.
+                if len(Board.get_columns_won_by_player(self.state.player_positions, self.name)) == 2:
+                    return 9000
+
+        return k
 
     def print_choices(self):
         """
@@ -780,16 +865,24 @@ class HumanPlayer(Player):
         """
         print("Turn #{}, your choices are:\n".format(self.state.turn))
         print("          Inc28 IncP2K IncK")
-        print("             -- ------ --")
+        print("             -- ------ ----")
         for ctr, choice in enumerate(self.state.choices, start=1):
             if len(choice) == 1:
-                print("{:2}: ({:2}, {:2}) {:2} {:1.0f}"
-                      .format(ctr, choice[0], "", self.compute_inc_rule28_score(choice),
-                              1000*self.compute_p2_score(choice)))
+                print("{:2}: ({:2}, {:2}) {:2} {:5.0f}  {:3.0f}"
+                      .format(ctr,
+                              choice[0],
+                              "",
+                              self.compute_inc_rule28_score(choice),
+                              self.compute_p2_score(choice),
+                              self.compute_k_score(choice)))
             else:
-                print("{:2}: ({:2}, {:2}) {:2} {:1.0f}"
-                      .format(ctr, choice[0], choice[1], self.compute_inc_rule28_score(choice),
-                              1000*self.compute_p2_score(choice)))
+                print("{:2}: ({:2}, {:2}) {:2} {:5.0f}  {:3.0f}"
+                      .format(ctr,
+                              choice[0],
+                              choice[1],
+                              self.compute_inc_rule28_score(choice),
+                              self.compute_p2_score(choice),
+                              self.compute_k_score(choice)))
 
     def choose_columns(self, state):
         self.state = state
@@ -808,13 +901,13 @@ class HumanPlayer(Player):
                 print("Try again.")
                 continue
 
-            if user_input not in range(1, len(self.state.choices)+1):
+            if user_input not in range(1, len(self.state.choices) + 1):
                 print("Try again.")
                 continue
 
             break
 
-        return self.state.choices[user_input-1]
+        return self.state.choices[user_input - 1]
 
     def stop_or_continue(self, state):
         self.state = state
@@ -822,7 +915,20 @@ class HumanPlayer(Player):
         self.print_info_block()
 
         print("1: Stop\n2: Continue")
-        user_input = input("Enter: ")
+        user_input = None
+        while True:
+            try:
+                user_input = int(input("Enter: "))
+            except ValueError:
+                print("Try again.")
+                continue
+
+            if user_input != 1 and user_input != 2:
+                print("Try again.")
+                continue
+
+            break
+
         return int(user_input)
 
     @staticmethod
@@ -855,6 +961,7 @@ class SingleValueOdds(object):
     Singleton to help performance a little.
     https://python-3-patterns-idioms-test.readthedocs.io/en/latest/Singleton.html
     """
+
     class __SingleValueOdds(object):
         def __init__(self):
             self.sum_count = defaultdict(int)
