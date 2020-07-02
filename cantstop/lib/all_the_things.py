@@ -48,7 +48,7 @@ class Game(object):
         for col in temp_columns:
             locked_position = self.board.columns[col].get_position(player.name)
             temp_position = self.board.temporary_progress[col]
-            if locked_position + temp_position >= self.board.columns[col].intervals:
+            if locked_position + temp_position >= self.board.columns[col].ranks:
                 free_columns.remove(col)
 
         logging.debug("Available: {}".format(free_columns))
@@ -89,11 +89,7 @@ class Game(object):
 
     def print_status(self):
         self.board.print_status()
-        if self.game_won:
-            print("The game ended after {} turns.  And the winner is: {}"
-                  .format(self.round_ctr, self.winner))
-        else:
-            print("The game is on turn {}.".format(self.round_ctr))
+        print("The game is on turn {}.".format(self.round_ctr))
 
     def run(self):
         shuffle(self.players)
@@ -142,6 +138,20 @@ class Game(object):
                             # Once there is a winner, return to main.
                             return
 
+    def print_summary(self):
+        """
+        This could be called once there's a winner to display stats.
+        :return:
+        """
+        if not self.game_won:
+            print("The game has not yet been won.")
+            return
+
+        self.board.print_status()
+        print("The game ended after {} turns.  And the winner is: {}"
+              .format(self.round_ctr, self.winner))
+        #TODO Would be nice to see the P2 and R28 scores here.
+
 
 class Column(object):
     """
@@ -160,14 +170,25 @@ class Column(object):
         :param column_number: The die roll that corresponds to this column, eg
         7 or 12.
         """
-        self.intervals = nums
         self.column_number = column_number
+        self.ranks = Column.get_ranks_by_column(self.column_number)
         self.positions = []  # This will be a list of list of players at each position.
         self.winner = None
         self.initialize_positions()
 
     def __repr__(self):
         return self.positions
+
+    @staticmethod
+    def get_ranks_by_column(column):
+        # The columns on the extreme right and left has 3
+        # positions.  The next column in, has 5 positions.  This
+        # continues until the middle column has 13 positions.
+        if column <= 7:
+            num_positions = column * 2 - 1
+        else:
+            num_positions = 27 - (column * 2)
+        return num_positions
 
     def _declare_winner(self, name):
         # If this column is completed by a player, then that player
@@ -182,8 +203,7 @@ class Column(object):
 
     def initialize_positions(self):
         self.positions = []
-        for rank in range(0, self.intervals+1):
-            # logging.debug("trying {} rank {}".format(self.intervals, rank))
+        for rank in range(0, self.ranks+1):
             self.positions.append([])
 
     def add_player(self, name):
@@ -217,8 +237,8 @@ class Column(object):
 
         current_position = self.get_position(name)
         future_position = current_position + ranks
-        if future_position > self.intervals:
-            future_position = self.intervals
+        if future_position > self.ranks:
+            future_position = self.ranks
 
         logging.debug("Was {}, now {}".format(current_position, future_position))
         logging.debug(self.__repr__())
@@ -240,20 +260,8 @@ class Board(object):
 
     def initialize(self):
         for column in Settings.COLUMN_RANGE:
-            num_positions = Board.get_ranks_by_column(column)
+            num_positions = Column.get_ranks_by_column(column)
             self.columns[column] = Column(num_positions, column)
-
-    @staticmethod
-    def get_ranks_by_column(column):
-        # The columns on the extreme right and left has 3
-        # positions.  The next column in, has 5 positions.  This
-        # continues until the middle column has 13 positions.
-        # TODO this should be in Column()
-        if column <= 7:
-            num_positions = column * 2 - 1
-        else:
-            num_positions = 27 - (column * 2)
-        return num_positions
 
     def reset_progress(self):
         self.temporary_progress = {}
@@ -321,7 +329,7 @@ class Board(object):
         player_completed_columns = defaultdict(int)
         for player_name in positions:
             for column in Settings.COLUMN_RANGE:
-                ranks = Board.get_ranks_by_column(column)
+                ranks = Column.get_ranks_by_column(column)
                 if positions[player_name][column - 2] == ranks:
                     completed_columns[column] = player_name
                     player_completed_columns[player_name] += 1
@@ -341,7 +349,7 @@ class Board(object):
                 if positions[player_name][column - 2]:
                     if percentage:
                         numerator = positions[player_name][column - 2]
-                        denominator = Board.get_ranks_by_column(column)
+                        denominator = Column.get_ranks_by_column(column)
                         status += "{:>5}".format(perc(numerator, denominator, no_decimal=True))
                     else:
                         status += "{:>5}".format(positions[player_name][column - 2])
@@ -468,7 +476,7 @@ class State(object):
                 col = i + 2
 
                 # This might exist elsewhere.
-                scores[name] += (rank_count / Board.get_ranks_by_column(col)) ** 2 * 100
+                scores[name] += (rank_count / Column.get_ranks_by_column(col)) ** 2 * 100
         return scores
 
     def get_players_rule28_score(self):
@@ -525,7 +533,7 @@ class State(object):
         for i, rank in enumerate(self.player_positions[name]):
             col_number = i + 2
             player_rank_in_this_column = self.player_positions[name][i]
-            num_ranks_in_col = Board.get_ranks_by_column(col_number)
+            num_ranks_in_col = Column.get_ranks_by_column(col_number)
             p = player_rank_in_this_column / num_ranks_in_col
             p2 = p * p
             p2_score += p2
@@ -553,7 +561,7 @@ class State(object):
             temp_rank_in_this_column = 0
             if col_number in self.temp_progress:
                 temp_rank_in_this_column = self.temp_progress[col_number]
-            num_ranks_in_col = Board.get_ranks_by_column(col_number)
+            num_ranks_in_col = Column.get_ranks_by_column(col_number)
             p = (initial_rank_in_this_column + temp_rank_in_this_column) / num_ranks_in_col
             p2 = p * p
             p2_score += p2
@@ -633,7 +641,7 @@ class HumanPlayer(Player):
         # Infer pipes.  Considering using Column()s in State().
         completed_columns = {}
         for column in Settings.COLUMN_RANGE:
-            max_rank = Board.get_ranks_by_column(column)
+            max_rank = Column.get_ranks_by_column(column)
             for name in self.state.player_positions:
                 if self.state.player_positions[name][column-2] == max_rank:
                     completed_columns[column] = name
@@ -670,7 +678,7 @@ class HumanPlayer(Player):
             if combined_progress[column - 2]:
                 if percentage:
                     numerator = combined_progress[column - 2]
-                    denominator = Board.get_ranks_by_column(column)
+                    denominator = Column.get_ranks_by_column(column)
                     status += "{:>5}".format(perc(numerator, denominator, no_decimal=True))
                 else:
                     status += "{:>5}".format(combined_progress[column - 2])
@@ -748,7 +756,7 @@ class HumanPlayer(Player):
                 possible_progress = initial_plus_temp_progress + 2
             else:
                 possible_progress = initial_plus_temp_progress + 1
-            num_ranks_in_col = Board.get_ranks_by_column(ct)
+            num_ranks_in_col = Column.get_ranks_by_column(ct)
             possible_total += (possible_progress / num_ranks_in_col) ** 2 \
                 - (initial_plus_temp_progress / num_ranks_in_col) ** 2
 
