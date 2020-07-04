@@ -4,7 +4,6 @@
 Run different bots many times to see who is best.
 """
 import argparse
-import logging
 import sys
 from collections import defaultdict
 

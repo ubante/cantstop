@@ -42,7 +42,7 @@ class Tournament(object):
     def __init__(self):
         self.game_history = []
         self.scoreboard = None
-        self.game_indices = []  # list of tuples of ints
+        self.game_contestants = []  # list of tuples of Players
         self.results = {}
         self.all_players = []
 
@@ -57,8 +57,11 @@ class Tournament(object):
         for a in range(0, pcount-2):
             for b in range(a+1, pcount-1):
                 for c in range(b+1, pcount):
-                    self.game_indices.append((a, b, c))
-        print("Will play {} games with {} players.".format(len(self.game_indices), pcount))
+                    self.game_contestants.append((self.all_players[a],
+                                                  self.all_players[b],
+                                                  self.all_players[c]))
+
+        print("Will play {} games with {} players.".format(len(self.game_contestants), pcount))
 
     def play_game(self, players):
         # print("Playing a game with {}, {}, and {}".format(players[0].name, players[1].name, players[2].name))
@@ -71,11 +74,12 @@ class Tournament(object):
         self.results[tuple(players)] = game.winner  # this is a str of the winning player's name
 
     def run(self):
-        for game_index in self.game_indices:
+        for gc in self.game_contestants:
             players = []  # instances of bots
-            for g_ctr, i in enumerate(game_index):
-                player_class = self.all_players[i]
-                players.append(player_class(player_class.__name__))
+
+            # gc is a tuple of bot classes.
+            for p in gc:
+                players.append(p(p.__name__))
 
             self.play_game(players)
 
@@ -102,7 +106,6 @@ Examples:
     parser = argparse.ArgumentParser(description=description, epilog=epilog)
     parser.add_argument("-i", "--iteration", help="How many times to run?",
                         type=int, default=10000)
-    args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING,
                         stream=sys.stdout,
                         format='%(levelname)s - %(message)s')
@@ -116,4 +119,3 @@ Examples:
 
 if __name__ == "__main__":
     main()
-
